@@ -977,7 +977,7 @@ workflow SAREK {
         
         // ch_versions = ch_versions.mix(BAM_TO_CRAM_MAPPING.out.versions)
 
-        ch_cram_variant_calling = Channel.empty().mix(BAM_TO_CRAM_MAPPING.out.alignment_index)
+        ch_cram_variant_calling = Channel.empty().mix(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai) // BAM_TO_CRAM_MAPPING.out.alignment_index)
     }
 
     if (params.tools) {
