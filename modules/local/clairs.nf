@@ -46,7 +46,6 @@ process CLAIRS {
         --threads ${task.cpus} \\
         --output_dir . \\
         --output_prefix $prefix \\
-        -c chr1,chr2 \\
         $bed_command \\
         $args
 
