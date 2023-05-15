@@ -240,7 +240,7 @@ include { SAMTOOLS_CONVERT as BAM_TO_CRAM                } from '../modules/nf-c
 include { SAMTOOLS_CONVERT as BAM_TO_CRAM_MAPPING        } from '../modules/nf-core/samtools/convert/main'
 include {SAMTOOLS_ADDREPLACERG as BAM_ADDREPLACERG       } from '../modules/local/samtools_addreplacerg'
 
-// include { SAMTOOLS_SORT      } from '../modules/nf-core/samtools/sort/main'
+include { SAMTOOLS_SORT      } from '../modules/nf-core/samtools/sort/main'
 
 
 // Convert CRAM files (optional)
@@ -393,10 +393,10 @@ workflow SAREK {
 
     
     BAM_ADDREPLACERG(ch_input_sample_type.bam)
-    // SAMTOOLS_SORT(BAM_ADDREPLACERG.out.bam)
+    SAMTOOLS_SORT(BAM_ADDREPLACERG.out.bam)
     
         
-    ch_bam_mapped = BAM_ADDREPLACERG.out.bam.map{ meta, bam ->
+    ch_bam_mapped = SAMTOOLS_SORT.out.bam.map{ meta, bam ->
         // update ID when no multiple lanes or splitted fastqs
         // new_id = meta.size * meta.numLanes == 1 ? meta.sample : meta.id
         numLanes = meta.numLanes ?: 1
@@ -982,7 +982,7 @@ workflow SAREK {
         
         // ch_versions = ch_versions.mix(BAM_TO_CRAM_MAPPING.out.versions)
 
-        ch_cram_variant_calling = Channel.empty().mix(BAM_TO_CRAM_MAPPING.out.alignment_index) //BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai) // BAM_TO_CRAM_MAPPING.out.alignment_index)
+        ch_cram_variant_calling = Channel.empty().mix(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai) // BAM_TO_CRAM_MAPPING.out.alignment_index)
     }
 
     if (params.tools) {
