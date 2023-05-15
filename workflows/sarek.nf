@@ -393,7 +393,7 @@ workflow SAREK {
 
     
     BAM_ADDREPLACERG(ch_input_sample_type.bam)
-    SAMTOOLS_SORT(BAM_ADDREPLACERG.out.bam)
+    // SAMTOOLS_SORT(BAM_ADDREPLACERG.out.bam)
     
         
     ch_bam_mapped = SAMTOOLS_SORT.out.bam.map{ meta, bam ->
