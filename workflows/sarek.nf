@@ -418,7 +418,7 @@ workflow SAREK {
         [new_meta, bam]
     }.groupTuple()
 
-    BAM_MERGE_INDEX_SAMTOOLS(ch_bam_mapped)
+    BAM_MERGE_INDEX_SAMTOOLS(ch_bam_mapped, fasta, fasta_fai)
     
 
     BAM_TO_CRAM_MAPPING(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai, fasta, fasta_fai)
