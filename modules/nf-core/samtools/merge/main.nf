@@ -30,7 +30,7 @@ process SAMTOOLS_MERGE {
     """
     samtools \\
         merge \\
-        --threads ${task.cpus-1} \\
+        --threads 24 \\
         $args \\
         ${reference} \\
         ${prefix}.${file_type} \\
