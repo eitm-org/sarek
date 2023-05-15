@@ -28,7 +28,7 @@ workflow BAM_MERGE_INDEX_SAMTOOLS {
     INDEX_MERGE_BAM(SAMTOOLS_SORT.out.bam) //bam_to_merge.single.mix(MERGE_BAM.out.bam))
 
     bam_bai = bam_to_merge.single.map{meta, bam -> [meta, bam[0]]}
-        .mix(MERGE_BAM.out.bam)
+        .mix(SAMTOOLS_SORT.out.bam)
         .join(INDEX_MERGE_BAM.out.bai)
 
     // Gather versions of all tools used
