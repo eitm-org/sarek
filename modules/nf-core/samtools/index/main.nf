@@ -24,7 +24,7 @@ process SAMTOOLS_INDEX {
     """
     samtools \\
         index \\
-        -@ 4 \\
+        -@ ${task.cpus-1} \\
         $args \\
         $input
 
