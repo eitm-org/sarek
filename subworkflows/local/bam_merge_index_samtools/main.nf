@@ -24,7 +24,7 @@ workflow BAM_MERGE_INDEX_SAMTOOLS {
     }.set{bam_to_merge}
 
     SORT_BAM(bam_to_merge.multiple)
-    MERGE_BAM(SORT_BAM.bam, [], [])
+    MERGE_BAM(SORT_BAM.out.bam, [], [])
     INDEX_MERGE_BAM(bam_to_merge.single.mix(MERGE_BAM.out.bam))
 
     bam_bai = bam_to_merge.single.map{meta, bam -> [meta, bam[0]]}
