@@ -240,7 +240,7 @@ include { SAMTOOLS_CONVERT as BAM_TO_CRAM                } from '../modules/nf-c
 include { SAMTOOLS_CONVERT as BAM_TO_CRAM_MAPPING        } from '../modules/nf-core/samtools/convert/main'
 include {SAMTOOLS_ADDREPLACERG as BAM_ADDREPLACERG       } from '../modules/local/samtools_addreplacerg'
 
-include { SAMTOOLS_SORT      } from '../modules/nf-core/modules/samtools/sort/main'
+include { SAMTOOLS_SORT      } from '../modules/nf-core/samtools/sort/main'
 
 
 // Convert CRAM files (optional)
