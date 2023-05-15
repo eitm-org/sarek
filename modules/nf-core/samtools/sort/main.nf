@@ -22,7 +22,7 @@ process SAMTOOLS_SORT {
     def prefix = task.ext.prefix ?: "${meta.id}"
     // if ("$bam" == "${prefix}.sorted.bam") error "Input and output names are the same, use \"task.ext.prefix\" to disambiguate!"
     """
-    samtools sort $args -@ $task.cpus -o ${prefix}.sorted.bam -T $prefix $bam
+    samtools sort $args -@ $task.cpus -o ${prefix}.bam -T $prefix $bam
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         samtools: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')
