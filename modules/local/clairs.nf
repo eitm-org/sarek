@@ -43,7 +43,7 @@ process CLAIRS {
         $inputs \\
         $normal_vcf_fn \\
         --ref_fn ${fasta} \\
-        --threads ${task.cpus} \\
+        --threads 12 \\
         --output_dir . \\
         --output_prefix $prefix \\
         $bed_command \\
