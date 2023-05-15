@@ -393,10 +393,10 @@ workflow SAREK {
 
     
     BAM_ADDREPLACERG(ch_input_sample_type.bam)
-    // SAMTOOLS_SORT(BAM_ADDREPLACERG.out.bam)
+    SAMTOOLS_SORT(BAM_ADDREPLACERG.out.bam)
     
         
-    ch_bam_mapped = BAM_ADDREPLACERG.out.bam.map{ meta, bam ->
+    ch_bam_mapped = SAMTOOLS_SORT.out.bam.map{ meta, bam ->
         // update ID when no multiple lanes or splitted fastqs
         // new_id = meta.size * meta.numLanes == 1 ? meta.sample : meta.id
         numLanes = meta.numLanes ?: 1
