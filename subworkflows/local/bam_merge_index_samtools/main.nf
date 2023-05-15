@@ -6,7 +6,6 @@
 
 include { SAMTOOLS_INDEX as INDEX_MERGE_BAM } from '../../../modules/nf-core/samtools/index/main'
 include { SAMTOOLS_MERGE as MERGE_BAM       } from '../../../modules/nf-core/samtools/merge/main'
-include { SAMTOOLS_SORT as SORT_BAM       } from '../../../modules/nf-core/samtools/sort/main'
 
 
 workflow BAM_MERGE_INDEX_SAMTOOLS {
@@ -23,8 +22,7 @@ workflow BAM_MERGE_INDEX_SAMTOOLS {
         multiple: it[1].size() > 1
     }.set{bam_to_merge}
 
-    SORT_BAM(bam_to_merge.multiple)
-    MERGE_BAM(SORT_BAM.out.bam, [], [])
+    MERGE_BAM(bam_to_merge.multiple, [], [])
     INDEX_MERGE_BAM(bam_to_merge.single.mix(MERGE_BAM.out.bam))
 
     bam_bai = bam_to_merge.single.map{meta, bam -> [meta, bam[0]]}

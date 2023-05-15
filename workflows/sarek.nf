@@ -240,6 +240,9 @@ include { SAMTOOLS_CONVERT as BAM_TO_CRAM                } from '../modules/nf-c
 include { SAMTOOLS_CONVERT as BAM_TO_CRAM_MAPPING        } from '../modules/nf-core/samtools/convert/main'
 include {SAMTOOLS_ADDREPLACERG as BAM_ADDREPLACERG       } from '../modules/local/samtools_addreplacerg'
 
+include { SAMTOOLS_SORT      } from '../../modules/nf-core/modules/samtools/sort/main'
+
+
 // Convert CRAM files (optional)
 include { SAMTOOLS_CONVERT as CRAM_TO_BAM                } from '../modules/nf-core/samtools/convert/main'
 include { SAMTOOLS_CONVERT as CRAM_TO_BAM_RECAL          } from '../modules/nf-core/samtools/convert/main'
@@ -390,8 +393,10 @@ workflow SAREK {
 
     
     BAM_ADDREPLACERG(ch_input_sample_type.bam)
+    SAMTOOLS_SORT(BAM_ADDREPLACERG.out.bam)
+    
         
-    ch_bam_mapped = BAM_ADDREPLACERG.out.bam.map{ meta, bam ->
+    ch_bam_mapped = SAMTOOLS_SORT.out.bam.map{ meta, bam ->
         // update ID when no multiple lanes or splitted fastqs
         // new_id = meta.size * meta.numLanes == 1 ? meta.sample : meta.id
         numLanes = meta.numLanes ?: 1
