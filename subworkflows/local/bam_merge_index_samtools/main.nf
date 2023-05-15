@@ -12,6 +12,8 @@ include { SAMTOOLS_SORT      } from '../../../modules/nf-core/samtools/sort/main
 workflow BAM_MERGE_INDEX_SAMTOOLS {
     take:
         bam // channel: [mandatory] meta, bam
+        fasta
+        fai
 
     main:
     ch_versions = Channel.empty()
