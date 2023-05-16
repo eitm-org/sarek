@@ -396,11 +396,11 @@ workflow SAREK {
     SAMTOOLS_SORT(BAM_ADDREPLACERG.out.bam)
 
 
-    SAMTOOLS_SORT.out.bam.view()
+    // SAMTOOLS_SORT.out.bam.view()
 
     // SAMTOOLS_SORT.out.bam.toSortedList().view()
 
-    ch_bam_mapped = SAMTOOLS_SORT.out.bam.toSortedList().map{ meta, bam ->
+    ch_bam_mapped = SAMTOOLS_SORT.out.bam.map{ meta, bam ->
         // update ID when no multiple lanes or splitted fastqs
         // new_id = meta.size * meta.numLanes == 1 ? meta.sample : meta.id
         numLanes = meta.numLanes ?: 1
@@ -420,7 +420,7 @@ workflow SAREK {
             read_group: new_read_group
             ]
         [new_meta, bam]
-    }.groupTuple()
+    }.groupTuple().map{ meta, bam -> meta, bam.toSortedList()}
 
     BAM_MERGE_INDEX_SAMTOOLS(ch_bam_mapped, fasta, fasta_fai)
     
