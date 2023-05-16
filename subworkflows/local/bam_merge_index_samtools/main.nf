@@ -19,7 +19,7 @@ workflow BAM_MERGE_INDEX_SAMTOOLS {
     ch_versions = Channel.empty()
 
     // Figuring out if there is one or more bam(s) from the same sample
-    bam.toSortedList().branch{
+    bam.branch{
         //Here there actually is a list, so size() works
         single:   it[1].size() == 1
         multiple: it[1].size() > 1
