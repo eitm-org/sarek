@@ -23,7 +23,7 @@ workflow BAM_MERGE_INDEX_SAMTOOLS {
         //Here there actually is a list, so size() works
         single:   it[1].size() == 1
         multiple: it[1].size() > 1
-    }.set{bam_to_merge}
+    }.toSortedList().set{bam_to_merge}
 
     MERGE_BAM(bam_to_merge.multiple, fasta, fai)
     
