@@ -19,11 +19,11 @@ workflow BAM_MERGE_INDEX_SAMTOOLS {
     ch_versions = Channel.empty()
 
     // Figuring out if there is one or more bam(s) from the same sample
-    bam.branch{
+    bam.toSortedList().branch{
         //Here there actually is a list, so size() works
         single:   it[1].size() == 1
         multiple: it[1].size() > 1
-    }.toSortedList().set{bam_to_merge}
+    }.set{bam_to_merge}
 
     MERGE_BAM(bam_to_merge.multiple, fasta, fai)
     
