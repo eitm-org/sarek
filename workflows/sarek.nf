@@ -420,7 +420,7 @@ workflow SAREK {
             read_group: new_read_group
             ]
         [new_meta, bam]
-    }.groupTuple().map{ meta, bam -> tuple(meta, bam.toSortedList())}
+    }.groupTuple(sort: true)
 
     BAM_MERGE_INDEX_SAMTOOLS(ch_bam_mapped, fasta, fasta_fai)
     
