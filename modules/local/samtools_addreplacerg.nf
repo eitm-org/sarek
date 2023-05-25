@@ -20,8 +20,9 @@ process SAMTOOLS_ADDREPLACERG {
     def args = task.ext.args  ?: ''
     def prefix   = task.ext.prefix ?: "${meta.id}"
     """
-    samtools addreplacerg -r  ${meta.read_group} $input -o ${prefix}.${input.getExtension()}
+    samtools addreplacerg -r  ${meta.read_group} $input -o tmp
     
+    samtools view -bF 0x900 -q 20 -F 2048 -F 256 -F 512 -@ $task.cpus -o ${prefix}.${input.getExtension()} tmp
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
