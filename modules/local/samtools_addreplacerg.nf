@@ -22,6 +22,7 @@ process SAMTOOLS_ADDREPLACERG {
     """
     samtools addreplacerg -r  ${meta.read_group} $input -o tmp
     
+    potato
     samtools view -bF 0x900 -q 20 -F 2048 -F 256 -F 512 -@ $task.cpus -o ${prefix}.${input.getExtension()} tmp
 
     cat <<-END_VERSIONS > versions.yml
