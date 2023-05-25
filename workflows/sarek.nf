@@ -397,7 +397,7 @@ workflow SAREK {
     
     BAM_ADDREPLACERG(ch_input_sample_type.bam)
     BAM_VIEW(BAM_ADDREPLACERG.out.bam, fasta, fasta_fai)
-    SAMTOOLS_SORT(SAMTOOLS_VIEW.out.bam)
+    SAMTOOLS_SORT(BAM_VIEW.out.bam)
 
 
     // SAMTOOLS_SORT.out.bam.view()
