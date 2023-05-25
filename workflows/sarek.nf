@@ -290,6 +290,9 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS                    } from '../modules/nf-c
 // MULTIQC
 include { MULTIQC                                        } from '../modules/nf-core/multiqc/main'
 
+
+include { SAMTOOLS_VIEW      as       BAM_VIEW                      } from '../../../modules/nf-core/samtools/view/main'
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     CONFIG FILES
@@ -393,7 +396,8 @@ workflow SAREK {
 
     
     BAM_ADDREPLACERG(ch_input_sample_type.bam)
-    SAMTOOLS_SORT(BAM_ADDREPLACERG.out.bam)
+    BAM_VIEW(BAM_ADDREPLACERG.out.bam)
+    SAMTOOLS_SORT(SAMTOOLS_VIEW.out.bam)
 
 
     // SAMTOOLS_SORT.out.bam.view()
