@@ -291,7 +291,7 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS                    } from '../modules/nf-c
 include { MULTIQC                                        } from '../modules/nf-core/multiqc/main'
 
 
-include { SAMTOOLS_VIEW      as       BAM_VIEW                      } from '../../../modules/nf-core/samtools/view/main'
+include { SAMTOOLS_VIEW      as       BAM_VIEW                      } from '../modules/nf-core/samtools/view/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
