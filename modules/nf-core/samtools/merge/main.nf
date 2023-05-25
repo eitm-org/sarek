@@ -36,8 +36,6 @@ process SAMTOOLS_MERGE {
         ${reference} \\
         ${prefix}.${file_type} \\
         $input_files
-
-    potato
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
