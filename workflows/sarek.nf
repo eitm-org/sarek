@@ -1302,7 +1302,7 @@ def extract_csv(csv_file) {
                 log.error "Missing field in csv file header. The csv file must have fields named 'patient' and 'sample'."
                 System.exit(1)
             }
-            [[row.patient.toString(), row.sample.toString().replaceAll('_[0-9]$','')], row]
+            [[row.patient.toString(), row.sample.toString()], row]
         }.groupTuple()
         .map{ meta, rows ->
             size = rows.size()
@@ -1317,7 +1317,7 @@ def extract_csv(csv_file) {
         // Several sample can belong to the same patient
         // Sample should be unique for the patient
         if (row.patient) meta.patient = row.patient.toString()
-        if (row.sample)  meta.sample  = row.sample.toString().replaceAll('_[0-9]$','')
+        if (row.sample)  meta.sample  = row.sample.toString()
         if (row.flowcell)  meta.flowcell  = row.flowcell.toString()
 
         // If no sex specified, sex is not considered
