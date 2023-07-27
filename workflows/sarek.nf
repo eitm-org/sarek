@@ -403,7 +403,7 @@ workflow SAREK {
 
         new_meta = [
             data_type:  meta.data_type,
-            id:         meta.sample.replaceAll('_[0-9]$',''),
+            id:         meta.sample,
             patient:    meta.patient,
             sample:     meta.sample,
             sex:        meta.sex,
@@ -619,7 +619,7 @@ workflow SAREK {
         // Or bams that are specified in the samplesheet.csv when step is prepare_recalibration
         ch_for_markduplicates = params.step == 'mapping'? ch_bam_mapped : BAM_TO_CRAM_MAPPING.out.alignment_index.map{meta, cram, crai -> 
             new_meta = [
-                            id:meta.sample.replaceAll('_[0-9]$', ''),
+                            id:meta.sample,
                             data_type:"cram",
                             patient:meta.patient,
                             sample:meta.sample,
@@ -1317,8 +1317,7 @@ def extract_csv(csv_file) {
         // Several sample can belong to the same patient
         // Sample should be unique for the patient
         if (row.patient) meta.patient = row.patient.toString()
-        if (row.sample)  meta.sample  = row.sample.toString()
-        if (row.sample)  meta.id  = row.sample.toString()
+        if (row.sample)  meta.sample  = row.sample.toString().replaceAll('_[0-9]$','')
         if (row.flowcell)  meta.flowcell  = row.flowcell.toString()
 
         // If no sex specified, sex is not considered
