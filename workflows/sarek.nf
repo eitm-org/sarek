@@ -403,7 +403,7 @@ workflow SAREK {
 
         new_meta = [
             data_type:  meta.data_type,
-            id:         meta.sample,
+            id:         meta.sample.replace("_[0-9]$", ""),
             patient:    meta.patient,
             sample:     meta.sample,
             sex:        meta.sex,
@@ -1051,7 +1051,7 @@ workflow SAREK {
             .map { normal, tumor ->
                 def meta = [:]
                 meta.patient    = normal[0]
-                meta.normal_id  = normal[1].sample
+                meta.normal_id  = normal[1]
                 meta.tumor_id   = tumor[1].sample
                 meta.sex        = normal[1].sex
                 meta.id         = "${meta.tumor_id}_vs_${meta.normal_id}".toString()
