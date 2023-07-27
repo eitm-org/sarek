@@ -403,7 +403,7 @@ workflow SAREK {
 
         new_meta = [
             data_type:  meta.data_type,
-            id:         meta.sample,
+            id:         meta.sample.replaceAll('_[0-9]$',''),
             patient:    meta.patient,
             sample:     meta.sample,
             sex:        meta.sex,
