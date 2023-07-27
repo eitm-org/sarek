@@ -1302,7 +1302,7 @@ def extract_csv(csv_file) {
                 log.error "Missing field in csv file header. The csv file must have fields named 'patient' and 'sample'."
                 System.exit(1)
             }
-            [[row.patient.toString(), row.sample.toString()], row]
+            [[row.patient.toString(), row.sample.toString().replaceAll('_[0-9]$','')], row]
         }.groupTuple()
         .map{ meta, rows ->
             size = rows.size()
