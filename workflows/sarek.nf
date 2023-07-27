@@ -1385,7 +1385,7 @@ def extract_csv(csv_file) {
             if (!row.bai) {
                 log.error "BAM index (bai) should be provided."
             }
-            meta.id         = "${row.sample}-${row.lane}".toString()
+            meta.id         = "${meta.sample}-${row.lane}".toString()
             def bam         = file(row.bam,   checkIfExists: true)
             def bai         = file(row.bai,   checkIfExists: true)
             def CN          = params.seq_center ? "CN:${params.seq_center}\\t" : ''
