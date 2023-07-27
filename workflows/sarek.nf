@@ -619,7 +619,7 @@ workflow SAREK {
         // Or bams that are specified in the samplesheet.csv when step is prepare_recalibration
         ch_for_markduplicates = params.step == 'mapping'? ch_bam_mapped : BAM_TO_CRAM_MAPPING.out.alignment_index.map{meta, cram, crai -> 
             new_meta = [
-                            id:meta.sample,
+                            id:meta.sample.replaceAll('_[0-9]$', ''),
                             data_type:"cram",
                             patient:meta.patient,
                             sample:meta.sample,
