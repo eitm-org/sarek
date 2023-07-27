@@ -29,7 +29,6 @@ process DEEPVARIANT {
 
     """
     /opt/deepvariant/bin/run_deepvariant \\
-        --gpus 1 \\
         --ref=${fasta} \\
         --reads=${input} \\
         --output_vcf=${prefix}.vcf.gz \\
