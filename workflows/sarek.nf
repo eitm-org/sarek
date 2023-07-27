@@ -1318,7 +1318,7 @@ def extract_csv(csv_file) {
         // Sample should be unique for the patient
         if (row.patient) meta.patient = row.patient.toString()
         if (row.sample)  meta.sample  = row.sample.toString()
-        if (row.sample)  meta.id  = row.sample.toString().replace("_[0-9]$","")
+        if (row.sample)  meta.id  = row.sample.toString()
         if (row.flowcell)  meta.flowcell  = row.flowcell.toString()
 
         // If no sex specified, sex is not considered
