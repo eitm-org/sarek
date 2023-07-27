@@ -1051,7 +1051,7 @@ workflow SAREK {
             .map { normal, tumor ->
                 def meta = [:]
                 meta.patient    = normal[0]
-                meta.normal_id  = normal[1]
+                meta.normal_id  = normal[1].sample
                 meta.tumor_id   = tumor[1].sample
                 meta.sex        = normal[1].sex
                 meta.id         = "${meta.tumor_id}_vs_${meta.normal_id}".toString()
@@ -1317,7 +1317,7 @@ def extract_csv(csv_file) {
         // Several sample can belong to the same patient
         // Sample should be unique for the patient
         if (row.patient) meta.patient = row.patient.toString()
-        if (row.sample)  meta.sample  = row.sample.toString()
+        if (row.sample)  meta.sample  = row.sample.toString().replaceAll('_[0-9]$','')
         if (row.flowcell)  meta.flowcell  = row.flowcell.toString()
 
         // If no sex specified, sex is not considered
