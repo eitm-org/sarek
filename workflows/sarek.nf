@@ -1060,9 +1060,15 @@ workflow SAREK {
             }
 
         // GERMLINE VARIANT CALLING
+
+        ch_cram_variant_calling.branch{
+            unique: it[0].id[-2..-1] == '_0'
+            other: it[0].id[-2..-1] != '_0'
+        }.set{ch_cram_variant_calling_unique}
+
         BAM_VARIANT_CALLING_GERMLINE_ALL(
             params.tools,
-            ch_cram_variant_calling,
+            ch_cram_variant_calling_unique.unique,
             [[id:"bwa"],[]], //bwa_index for tiddit; not used here
             dbsnp,
             dbsnp_tbi,
