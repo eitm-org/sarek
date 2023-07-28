@@ -1062,7 +1062,7 @@ workflow SAREK {
         // GERMLINE VARIANT CALLING
         BAM_VARIANT_CALLING_GERMLINE_ALL(
             params.tools,
-            ch_cram_variant_calling_status_normal,
+            ch_cram_variant_calling,
             [[id:"bwa"],[]], //bwa_index for tiddit; not used here
             dbsnp,
             dbsnp_tbi,
