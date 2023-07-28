@@ -1062,8 +1062,8 @@ workflow SAREK {
         // GERMLINE VARIANT CALLING
 
         ch_cram_variant_calling.branch{
-            unique: it[0].id[-2..-1] == '_0'
-            other: it[0].id[-2..-1] != '_0'
+            unique: it[0].id[-2..-1] != '_0'
+            other: it[0].id[-2..-1] == '_0'
         }.set{ch_cram_variant_calling_unique}
 
         BAM_VARIANT_CALLING_GERMLINE_ALL(
