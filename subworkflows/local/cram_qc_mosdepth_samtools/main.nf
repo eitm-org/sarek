@@ -33,6 +33,7 @@ workflow CRAM_QC_MOSDEPTH_SAMTOOLS {
 
     emit:
         qc       = qc_reports
+        summary_txt = MOSDEPTH.out.summary_txt
 
         versions = ch_versions // channel: [ versions.yml ]
 }

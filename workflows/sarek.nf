@@ -56,7 +56,7 @@ def checkPathParamList = [
     Check mandatory parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-for (param in checkPathParamList) if (param) file(param, checkIfExists: true)
+for (param in checkPathParamList) { if (param) file(param, checkIfExists: true) }
 
 // Set input, can either be from --input or from automatic retrieval in WorkflowSarek.groovy
 ch_input_sample = extract_csv(file(params.input, checkIfExists: true))
@@ -216,6 +216,7 @@ include { PREPARE_INTERVALS                              } from '../subworkflows
 
 // Build CNVkit reference if needed
 include { PREPARE_REFERENCE_CNVKIT                       } from '../subworkflows/local/prepare_reference_cnvkit/main'
+include { PREPARE_REFERENCE_SNIFFLES2                    } from '../subworkflows/local/prepare_reference_sniffles2/main'
 
 // Convert BAM files to FASTQ files
 include { BAM_CONVERT_SAMTOOLS as CONVERT_FASTQ_INPUT    } from '../subworkflows/local/bam_convert_samtools/main'
@@ -231,7 +232,7 @@ include { FASTP                                          } from '../modules/nf-c
 include { FASTQ_CREATE_UMI_CONSENSUS_FGBIO               } from '../subworkflows/local/fastq_create_umi_consensus_fgbio/main'
 
 // Map input reads to reference genome
-include { FASTQ_ALIGN_BWAMEM_MEM2_DRAGMAP_MINIMAP2                } from '../subworkflows/local/fastq_align_bwamem_mem2_dragmap/main'
+include { FASTQ_ALIGN_BWAMEM_MEM2_DRAGMAP_MINIMAP2       } from '../subworkflows/local/fastq_align_bwamem_mem2_dragmap/main'
 
 // Merge and index BAM files (optional)
 include { BAM_MERGE_INDEX_SAMTOOLS                       } from '../subworkflows/local/bam_merge_index_samtools/main'
@@ -240,7 +241,7 @@ include { MODKIT                                         } from '../modules/loca
 // Convert BAM files
 include { SAMTOOLS_CONVERT as BAM_TO_CRAM                } from '../modules/nf-core/samtools/convert/main'
 include { SAMTOOLS_CONVERT as BAM_TO_CRAM_MAPPING        } from '../modules/nf-core/samtools/convert/main'
-include {SAMTOOLS_ADDREPLACERG as BAM_ADDREPLACERG       } from '../modules/local/samtools_addreplacerg'
+include { SAMTOOLS_ADDREPLACERG as BAM_ADDREPLACERG       } from '../modules/local/samtools_addreplacerg'
 
 // Convert CRAM files (optional)
 include { SAMTOOLS_CONVERT as CRAM_TO_BAM                } from '../modules/nf-core/samtools/convert/main'
@@ -276,6 +277,9 @@ include { BAM_VARIANT_CALLING_TUMOR_ONLY_ALL             } from '../subworkflows
 
 // Variant calling on tumor/normal pair
 include { BAM_VARIANT_CALLING_SOMATIC_ALL                } from '../subworkflows/local/bam_variant_calling_somatic_all/main'
+
+// Structural variant calling
+include { BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2       } from '../subworkflows/local/bam_variant_calling_structural_sniffles2/main'
 
 // QC on VCF files
 include { VCF_QC_BCFTOOLS_VCFTOOLS                       } from '../subworkflows/local/vcf_qc_bcftools_vcftools/main'
@@ -427,7 +431,6 @@ workflow SAREK {
     ch_bam_sorted = ch_bam_mapped.map{ meta, bam -> 
         [meta, bam.sort {it.name.replaceAll('.*/','')}]
     }
-
     BAM_MERGE_INDEX_SAMTOOLS(ch_bam_sorted)
 
     if (params.tools?.split(',')?.contains('modkit')) {
@@ -997,6 +1000,60 @@ workflow SAREK {
         ch_cram_variant_calling = Channel.empty().mix(BAM_TO_CRAM_MAPPING.out.alignment_index)
     }
 
+    if (params.tools?.split(',')?.contains('sniffles2')) {
+        bam_channel = Channel.empty()
+        bam_channel = BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai
+  
+        reference = PREPARE_REFERENCE_SNIFFLES2([
+            "input_ref": params.fasta,
+            "output_cache": true,
+            "output_mmi": false
+        ])
+
+        ref = reference.ref
+        ref_index = reference.ref_idx
+        ref_cache = reference.ref_cache
+        ref_gzindex = reference.ref_gzidx
+
+        // canonical ref and BAM channels to pass around to all processes
+        ref_channel = ref
+        | concat(ref_index)
+        | concat(ref_cache)
+        | flatten
+        | buffer(size: 4)
+
+        // Programmatically define chromosome codes.
+        // note that we avoid interpolation (eg. "${chr}N") to ensure that values
+        // are Strings and not GStringImpl, ensuring that .contains works.
+        ArrayList chromosome_codes = []
+        ArrayList chromosomes = [1..22] + ["X", "Y", "M", "MT"]
+        for (N in chromosomes.flatten()){
+            chromosome_codes += ["chr" + N, "" + N]
+        }
+
+        OPTIONAL = file("$projectDir/data/OPTIONAL_FILE")
+
+        MOSDEPTH = CRAM_QC_RECAL(
+                ch_cram_variant_calling,
+                fasta,
+                fasta_fai,
+                intervals_for_preprocessing)
+
+        // inputs: bam_channel, reference, target, mosdepth_stats, optional_file, genome_build, chromosome_codes
+        // emits: report (annotation), sv_stats_json, sniffles_vcf, for_phasing vcf
+        BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 (
+            bam_channel, // bam inputs (meta, bam, bai)
+            ref_channel, 
+            params.intervals, // bed file
+            MOSDEPTH.summary_txt,
+            OPTIONAL,
+            chromosome_codes
+        )
+
+        ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.versions)
+        vcf_to_annotate = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sniffles2_vcf
+    }
+
     if (params.tools?.split(',')?.contains('clairs')) {
         if (params.step == 'annotate') ch_cram_variant_calling = Channel.empty()
 
@@ -1159,7 +1216,6 @@ workflow SAREK {
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.manta_vcf)
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.strelka_vcf)
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.tiddit_vcf)
-
 
         // Gather used softwares versions
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.versions)

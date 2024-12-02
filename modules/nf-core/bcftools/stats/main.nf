@@ -28,7 +28,7 @@ process BCFTOOLS_STATS {
     def samples_file =  samples ? "--samples-file ${samples}" : ""
     """
     bcftools +fill-tags $vcf -Ob -o ${vcf.baseName}_tagged.vcf.gz -- -t all,"INFO/DP:1=int(sum(FORMAT/DP))"
-
+    cat ${vcf.baseName}_tagged.vcf.gz 
     bcftools stats \\
         --verbose -s - \\
         $args \\
