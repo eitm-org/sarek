@@ -120,7 +120,7 @@ workflow PREPARE_REFERENCE_SNIFFLES2 {
 
         // Base ref channel
         if (file(margs.input_ref).exists()){
-            ref = Channel.fromPath(margs.input_ref)
+            ref = Channel.fromPath(margs.input_ref).collect()
         } else {
             throw new Exception(colors.red + "File ${margs.input_ref} not found." + colors.reset)
         }

@@ -394,7 +394,6 @@ workflow SAREK {
         fastq: it[0].data_type == "fastq"
     }.set{ch_input_sample_type}
 
-    
     BAM_ADDREPLACERG(ch_input_sample_type.bam)
         
     ch_bam_mapped = BAM_ADDREPLACERG.out.bam.map{ meta, bam ->
@@ -1005,31 +1004,8 @@ workflow SAREK {
         bam_channel = BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai
   
         reference = PREPARE_REFERENCE_SNIFFLES2([
-            "input_ref": params.fasta,
-            "output_cache": true,
-            "output_mmi": false
+            "input_ref": params.fasta, "output_cache": false, "output_mmi": false
         ])
-
-        ref = reference.ref
-        ref_index = reference.ref_idx
-        ref_cache = reference.ref_cache
-        ref_gzindex = reference.ref_gzidx
-
-        // canonical ref and BAM channels to pass around to all processes
-        ref_channel = ref
-        | concat(ref_index)
-        | concat(ref_cache)
-        | flatten
-        | buffer(size: 4)
-
-        // Programmatically define chromosome codes.
-        // note that we avoid interpolation (eg. "${chr}N") to ensure that values
-        // are Strings and not GStringImpl, ensuring that .contains works.
-        ArrayList chromosome_codes = []
-        ArrayList chromosomes = [1..22] + ["X", "Y", "M", "MT"]
-        for (N in chromosomes.flatten()){
-            chromosome_codes += ["chr" + N, "" + N]
-        }
 
         OPTIONAL = file("$projectDir/data/OPTIONAL_FILE")
 
@@ -1039,18 +1015,19 @@ workflow SAREK {
                 fasta_fai,
                 intervals_for_preprocessing)
 
-        // inputs: bam_channel, reference, target, mosdepth_stats, optional_file, genome_build, chromosome_codes
+        // inputs: bam_channel, reference, target, mosdepth_stats, optional_file
         // emits: report (annotation), sv_stats_json, sniffles_vcf, for_phasing vcf
         BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 (
             bam_channel, // bam inputs (meta, bam, bai)
-            ref_channel, 
+            reference.ref, // reference fasta file
             params.intervals, // bed file
             MOSDEPTH.summary_txt,
-            OPTIONAL,
-            chromosome_codes
+            OPTIONAL
         )
 
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.versions)
+
+        vcf_to_annotate = Channel.empty()
         vcf_to_annotate = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sniffles2_vcf
     }
 
@@ -1315,7 +1292,6 @@ workflow.onComplete {
 */
 // Function to extract information (meta data + file(s)) from csv file(s)
 def extract_csv(csv_file) {
-
     // check that the sample sheet is not 1 line or less, because it'll skip all subsequent checks if so.
     file(csv_file).withReader('UTF-8') { reader ->
         def line, numberOfLinesInSampleSheet = 0;
@@ -1421,7 +1397,7 @@ def extract_csv(csv_file) {
                 System.exit(1)
             }
         }
-
+        
         // mapping with fastq
         if (row.lane && row.fastq_2) {
             meta.id         = "${row.sample}-${row.lane}".toString()

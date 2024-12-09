@@ -3,7 +3,6 @@ include {
     SNIFFLES2;
     filterCalls;
     sortVCF;
-    getGenome;
 } from "../../../modules/local/sniffles2.nf"
 include {
     filterBenchmarkVcf;
@@ -14,37 +13,33 @@ include {
     MOSDEPTH           
 } from '../../../modules/nf-core/mosdepth/main'
 
-
 workflow BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 {
     take:
         bam_channel                                 // channel: [mandatory] [meta, bam, bai]
-        reference                                   // channel: [mandatory] [fasta]
+        reference                                   // channel: [mandatory] [fa]
         target                                      // channel: [mandatory] [bed]
         mosdepth_stats
         optional_file
-        chromosome_codes
 
     main:
 
         ch_versions = Channel.empty()
 
-        depth_window_size = 25000
-        genome_build = getGenome(bam_channel).genome_build // hg38
-
-        // variantCall - calls SNIFFLES2, filterCalls, sortVCF
-        called = variantCall(bam_channel, reference, target, mosdepth_stats, optional_file, genome_build, chromosome_codes)
+        sniffles2 = SNIFFLES2(bam_channel.map{ meta, xam, xai -> [meta, xam, xai] }, optional_file, reference)
+        filterCalls(sniffles2.vcf, mosdepth_stats, target)
+        sorted_vcf = sortVCF(filterCalls.out.vcf)
 
         hg002_seq = false
         if (hg002_seq) {
-            benchmark_result = runBenchmark(called.vcf, reference, target)
+            benchmark_result = runBenchmark(sorted_vcf.vcf, reference, target)
         } else {
             benchmark_result = Channel.fromPath(optional_file)
         }
 
-        ch_versions = ch_versions.mix(called.versions)
+        ch_versions = ch_versions.mix(sniffles2.versions)
 
     emit:
-        sniffles2_vcf = called.vcf // vcf after variantCall 
+        sniffles2_vcf = sorted_vcf.vcf_gz
         versions = ch_versions // software versions
 }
 
@@ -99,31 +94,4 @@ workflow runBenchmark {
             intersected.intersected_bed)
     emit:
         json = truvari.out.truvari_json
-}
-
-
-workflow variantCall {
-    take:
-        bam_channel
-        reference
-        target_bed
-        mosdepth_stats
-        optional_file
-        genome_build
-        chromosome_codes
-    main:
-        tr_bed = optional_file
-
-        if (!genome_build) {
-            genome_build = Channel.of(null)
-        }
-
-        SNIFFLES2(bam_channel, tr_bed, reference, genome_build)
-        filterCalls(SNIFFLES2.out.vcf, mosdepth_stats, target_bed, chromosome_codes)
-        sorted_vcf = sortVCF(filterCalls.out.vcf)
-
-    emit:
-        vcf = sorted_vcf.vcf_gz
-        vcf_index = sorted_vcf.vcf_tbi
-        versions = SNIFFLES2.out.versions
 }

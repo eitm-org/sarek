@@ -7,12 +7,12 @@ process SNIFFLES2 {
 
     input:
         tuple val(meta), path(xam), path(xam_idx)
-        file tr_bed
-        tuple path(ref), path(ref_idx), path(ref_cache), env(REF_PATH) 
-        val genome_build
+        path tr_bed
+        path ref //, path(ref_idx), path(ref_cache), env(REF_PATH) 
+        // val genome_build
     output:
-        tuple val(meta), path("*.sniffles.vcf"), emit: vcf
-        path "${xam}.wf_sv.snf", emit: snf
+        tuple val(meta), path("*.sniffles.vcf"), emit: vcf, optional: true
+        path "${xam}.wf_sv.snf", emit: snf, optional: true
         path "versions.yml", emit: versions
     script:
         // if tr_arg is not provided and genome_build is set
@@ -21,10 +21,16 @@ process SNIFFLES2 {
         if (tr_bed.name != 'OPTIONAL_FILE'){
             tr_arg = "--tandem-repeats ${tr_bed}"
         }
-        else if (genome_build) {
-            log.warn "Automatically selecting TR BED: ${genome_build}.trf.bed"
-            tr_arg = "--tandem-repeats \${WFSV_TRBED_PATH}/${genome_build}.trf.bed"
-        }
+
+        genome_build = 'hg38' // TODO: make this into params
+        tr_arg = "--tandem-repeats \${WFSV_TRBED_PATH}/${genome_build}.trf.bed"
+
+        // TODO: make these into params
+        params.sniffles_args = false
+        params.min_sv_length = false
+        params.phased = false
+        params.cluster_merge_pos = false
+
         def sniffles_args = params.sniffles_args ?: ''
         def min_sv_len = params.min_sv_length ? "--minsvlen ${params.min_sv_length}" : ""
         // Perform internal phasing only if snp not requested; otherwise, use joint phasing.
@@ -50,7 +56,7 @@ process SNIFFLES2 {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        sniffles2: \$(echo \$(sniffles --version 2>&1) | sed 's/^.*(sniffles) v//; s/ .*\$//')
+        sniffles2: \$(echo \$(sniffles --version) | sed 's/ /,/')
     END_VERSIONS
     """
 }
@@ -63,12 +69,19 @@ process filterCalls {
         tuple val(meta), path(vcf)
         tuple val(meta), path(mosdepth_summary)
         path target_bed
-        val chromosome_codes
     output:
         tuple val(meta), path("*.filtered.vcf"), emit: vcf
     script:
+    // Programmatically define chromosome codes.
+    // note that we avoid interpolation (eg. "${chr}N") to ensure that values
+    // are Strings and not GStringImpl, ensuring that .contains works.
+    ArrayList chromosome_codes = []
+    ArrayList chromosomes = [1..22] + ["X", "Y", "M", "MT"]
+    for (N in chromosomes.flatten()){
+        chromosome_codes += ["chr" + N, "" + N]
+    }
     String ctgs = chromosome_codes.join(',')
-    def ctgs_filter = params.include_all_ctgs ? "" : "--contigs ${ctgs}"
+    def ctgs_filter = "--contigs ${ctgs}"
     """
     # Filter contigs requre the input VCF to be compressed and indexed
     bcftools view -O z $vcf > input.vcf.gz && tabix -p vcf input.vcf.gz
@@ -104,25 +117,4 @@ process sortVCF {
     bcftools sort -m 2G -T ./ -O z $vcf > ${meta.id}.wf_sv.vcf.gz
     tabix -p vcf ${meta.id}.wf_sv.vcf.gz
     """
-}
-
-process getGenome {
-    label 'process_low'
-    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
-
-    input:
-        tuple val(meta), path(xam), path(xam_idx)
-    output:
-        env genome_build, emit: genome_build, optional: false
-     script:
-        // set flags for subworkflows that have genome build restrictions
-        def str_arg = ""
-        def cnv_arg = ""
-        def qdnaseq_arg = ""
-        """
-        # use view -H rather than idxstats, as idxstats will still cause a scan of the whole CRAM (https://github.com/samtools/samtools/issues/303)
-        samtools view -H ${xam} --no-PG | grep '^@SQ' | sed -nE 's,.*SN:([^[:space:]]*).*LN:([^[:space:]]*).*,\\1\\t\\2,p' > ${xam}_genome.txt
-        get_genome.py --chr_counts ${xam}_genome.txt -o output.txt ${str_arg} ${cnv_arg} ${qdnaseq_arg}
-        genome_build=`cat output.txt`
-        """
 }
