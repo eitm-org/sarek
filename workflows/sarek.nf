@@ -392,10 +392,10 @@ workflow SAREK {
     ch_input_sample.branch{
         bam:   it[0].data_type == "bam"
         fastq: it[0].data_type == "fastq"
+        cram:  it[0].data_type == "cram"
     }.set{ch_input_sample_type}
 
     BAM_ADDREPLACERG(ch_input_sample_type.bam)
-        
     ch_bam_mapped = BAM_ADDREPLACERG.out.bam.map{ meta, bam ->
         // update ID when no multiple lanes or splitted fastqs
         // new_id = meta.size * meta.numLanes == 1 ? meta.sample : meta.id
@@ -432,13 +432,45 @@ workflow SAREK {
     }
     BAM_MERGE_INDEX_SAMTOOLS(ch_bam_sorted)
 
+    cram_channel = ch_input_sample_type.cram.map{ meta, cram, crai ->
+        //Make sure correct data types are carried through
+                        [[
+                            data_type:  "cram",
+                            id:         meta.id,
+                            patient:    meta.patient,
+                            sample:     meta.sample,
+                            sex:        meta.sex,
+                            status:     meta.status
+                            ],
+                        cram, crai] }
+
+    CRAM_TO_BAM(cram_channel, fasta, fasta_fai)
+    ch_versions = ch_versions.mix(CRAM_TO_BAM.out.versions)
+
+    ch_cram_bam = CRAM_TO_BAM.out.bam.join(CRAM_TO_BAM.out.bai, failOnDuplicate: true, failOnMismatch: true).map{ meta, bam, bai ->
+        //Make sure correct data types are carried through
+                        [[
+                            data_type:  "bam",
+                            id:         meta.id,
+                            patient:    meta.patient,
+                            sample:     meta.sample,
+                            sex:        meta.sex,
+                            status:     meta.status
+                            ],
+                        bam, bai] }
+
+    bam_channel = Channel.empty()
+    bam_channel = !(params.input.contains("results/csv/mapped.csv")) ? BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai : ch_cram_bam
+
+    bam_channel.view()
+
     if (params.tools?.split(',')?.contains('modkit')) {
-        MODKIT(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai, fasta)
+        MODKIT(bam_channel, fasta)
         ch_versions = ch_versions.mix(MODKIT.out.versions)
     }
 
     BAM_TO_CRAM_MAPPING(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai, fasta, fasta_fai)
-    params.save_output_as_bam ? CHANNEL_ALIGN_CREATE_CSV(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai) : CHANNEL_ALIGN_CREATE_CSV(BAM_TO_CRAM_MAPPING.out.alignment_index)
+    params.save_output_as_bam ? CHANNEL_ALIGN_CREATE_CSV(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai) : CHANNEL_ALIGN_CREATE_CSV(BAM_TO_CRAM_MAPPING.out.cram.join(BAM_TO_CRAM_MAPPING.out.crai, failOnDuplicate: true, failOnMismatch: true))
     //BAM files first must be converted to CRAM files since from this step on we base everything on CRAM format
     
     ch_versions = ch_versions.mix(BAM_TO_CRAM_MAPPING.out.versions)
@@ -601,7 +633,7 @@ workflow SAREK {
 
             BAM_TO_CRAM_MAPPING(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai, fasta, fasta_fai)
             // Create CSV to restart from this step
-            params.save_output_as_bam ? CHANNEL_ALIGN_CREATE_CSV(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai) : CHANNEL_ALIGN_CREATE_CSV(BAM_TO_CRAM_MAPPING.out.alignment_index)
+            params.save_output_as_bam ? CHANNEL_ALIGN_CREATE_CSV(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai) : CHANNEL_ALIGN_CREATE_CSV(BAM_TO_CRAM_MAPPING.out.cram.join(BAM_TO_CRAM_MAPPING.out.crai, failOnDuplicate: true, failOnMismatch: true))
 
             // Gather used softwares versions
             ch_versions = ch_versions.mix(BAM_MERGE_INDEX_SAMTOOLS.out.versions)
@@ -623,7 +655,7 @@ workflow SAREK {
 
         // ch_bam_for_markduplicates will countain bam mapped with FASTQ_ALIGN_BWAMEM_MEM2_DRAGMAP when step is mapping
         // Or bams that are specified in the samplesheet.csv when step is prepare_recalibration
-        ch_for_markduplicates = params.step == 'mapping'? ch_bam_mapped : BAM_TO_CRAM_MAPPING.out.alignment_index.map{meta, cram, crai -> 
+        ch_for_markduplicates = params.step == 'mapping'? ch_bam_mapped : BAM_TO_CRAM_MAPPING.out.cram.join(BAM_TO_CRAM_MAPPING.out.crai, failOnDuplicate: true, failOnMismatch: true).map{meta, cram, crai -> 
             new_meta = [
                             id:meta.sample,
                             data_type:"cram",
@@ -639,7 +671,7 @@ workflow SAREK {
         ch_cram_skip_markduplicates = Channel.empty()
 
         if (params.step == 'mapping'){
-            if(params.skip_tools && params.skip_tools.split(',').contains('markduplicates')) ch_cram_skip_markduplicates = BAM_TO_CRAM_MAPPING.out.alignment_index
+            if(params.skip_tools && params.skip_tools.split(',').contains('markduplicates')) ch_cram_skip_markduplicates = BAM_TO_CRAM_MAPPING.out.cram.join(BAM_TO_CRAM_MAPPING.out.crai, failOnDuplicate: true, failOnMismatch: true)
         }
         if (params.skip_tools && params.skip_tools.split(',').contains('markduplicates')) {
 
@@ -709,7 +741,7 @@ workflow SAREK {
             ch_versions = ch_versions.mix(CRAM_TO_BAM.out.versions)
             // CSV should be written for the file actually out, either CRAM or BAM
             // Create CSV to restart from this step
-            CHANNEL_MARKDUPLICATES_CREATE_CSV(CRAM_TO_BAM.out.alignment_index)
+            CHANNEL_MARKDUPLICATES_CREATE_CSV(CRAM_TO_BAM.out.bam.join(CRAM_TO_BAM.out.bai, failOnDuplicate: true, failOnMismatch: true), csv_subfolder, params.outdir, params.save_output_as_bam)
         }
         else {
             // CSV should be written for the file actually out, either CRAM or BAM
@@ -733,7 +765,7 @@ workflow SAREK {
             BAM_TO_CRAM(ch_convert.bam, fasta, fasta_fai)
             ch_versions = ch_versions.mix(BAM_TO_CRAM.out.versions)
 
-            ch_cram_from_bam = BAM_TO_CRAM.out.alignment_index.map{meta, cram, crai ->
+            ch_cram_from_bam = BAM_TO_CRAM.out.cram.join(BAM_TO_CRAM.out.crai, failOnDuplicate: true, failOnMismatch: true).map{meta, cram, crai ->
                                                         [
                                                             [data_type:     "cram",
                                                             id:             meta.sample,
@@ -842,7 +874,7 @@ workflow SAREK {
             ch_versions = ch_versions.mix(BAM_TO_CRAM.out.versions)
 
             ch_cram_applybqsr = Channel.empty().mix(
-                                    BAM_TO_CRAM.out.alignment_index.join(ch_bam_table),
+                                    BAM_TO_CRAM.out.cram.join(BAM_TO_CRAM.out.crai, failOnDuplicate: true, failOnMismatch: true).join(ch_bam_table),
                                     ch_convert.cram) // Join together converted cram with input tables
         }
 
@@ -901,7 +933,7 @@ workflow SAREK {
 
             // CSV should be written for the file actually out out, either CRAM or BAM
             csv_recalibration = Channel.empty()
-            csv_recalibration = params.save_output_as_bam ?  CRAM_TO_BAM_RECAL.out.alignment_index : ch_cram_variant_calling
+            csv_recalibration = params.save_output_as_bam ? CRAM_TO_BAM_RECAL.out.bam.join(CRAM_TO_BAM_RECAL.out.bai, failOnDuplicate: true, failOnMismatch: true) : ch_cram_variant_calling
 
             // Create CSV to restart from this step
             CHANNEL_APPLYBQSR_CREATE_CSV(csv_recalibration)
@@ -911,7 +943,7 @@ workflow SAREK {
             // ch_cram_variant_calling contains either:
             // - input bams converted to crams, if started from step recal + skip BQSR
             // - input crams if started from step recal + skip BQSR
-            ch_cram_variant_calling = Channel.empty().mix(BAM_TO_CRAM.out.alignment_index,
+            ch_cram_variant_calling = Channel.empty().mix(BAM_TO_CRAM.out.cram.join(BAM_TO_CRAM.out.crai, failOnDuplicate: true, failOnMismatch: true),
                                                         ch_convert.cram.map{ meta, cram, crai, table -> [meta, cram, crai]})
         } else {
             // ch_cram_variant_calling contains either:
@@ -996,12 +1028,10 @@ workflow SAREK {
         
         // ch_versions = ch_versions.mix(BAM_TO_CRAM_MAPPING.out.versions)
 
-        ch_cram_variant_calling = Channel.empty().mix(BAM_TO_CRAM_MAPPING.out.alignment_index)
+        ch_cram_variant_calling = Channel.empty().mix(BAM_TO_CRAM_MAPPING.out.cram.join(BAM_TO_CRAM_MAPPING.out.crai, failOnDuplicate: true, failOnMismatch: true))
     }
 
     if (params.tools?.split(',')?.contains('sniffles2')) {
-        bam_channel = Channel.empty()
-        bam_channel = BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai
   
         reference = PREPARE_REFERENCE_SNIFFLES2([
             "input_ref": params.fasta, "output_cache": false, "output_mmi": false
@@ -1031,6 +1061,7 @@ workflow SAREK {
         vcf_to_annotate = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sniffles2_vcf
     }
 
+    ch_cram_variant_calling.view()
     if (params.tools?.split(',')?.contains('clairs')) {
         if (params.step == 'annotate') ch_cram_variant_calling = Channel.empty()
 
@@ -1477,9 +1508,11 @@ def extract_csv(csv_file) {
         // prepare_recalibration or variant_calling
         } else if (row.cram) {
             meta.id = meta.sample
-            def cram = file(row.cram, checkIfExists: true)
-            def crai = file(row.crai, checkIfExists: true)
-
+            row.cram = row.cram.toString().replaceAll('_0/','/')
+            row.crai = row.crai.toString().replaceAll('_0/','/')
+            def cram = file(row.cram.toString().replaceFirst(/_0\./,'.'), checkIfExists: true)
+            def crai = file(row.crai.toString().replaceFirst(/_0\./,'.'), checkIfExists: true)
+        
             meta.data_type  = 'cram'
 
             if (!(params.step == 'mapping' || params.step == 'annotate')) return [meta, cram, crai]
