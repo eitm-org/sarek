@@ -3,6 +3,9 @@ include {
     SNIFFLES2;
     filterCalls;
     sortVCF;
+    getVersions;
+    getParams;
+    report;
 } from "../../../modules/local/sniffles2.nf"
 include {
     filterBenchmarkVcf;
@@ -29,20 +32,36 @@ workflow BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 {
         filterCalls(sniffles2.vcf, mosdepth_stats, target)
         sorted_vcf = sortVCF(filterCalls.out.vcf)
 
-        hg002_seq = false
-        if (hg002_seq) {
-            benchmark_result = runBenchmark(sorted_vcf.vcf, reference, target)
-        } else {
-            benchmark_result = Channel.fromPath(optional_file)
-        }
+        annotation = false
+        if (!annotation) {
+            final_vcf = sorted_vcf.vcf_gz.join(sorted_vcf.vcf_tbi)
+
+            hg002_seq = false
+            if (hg002_seq) {
+                benchmark_result = runBenchmark(sorted_vcf.vcf_gz, reference, target)
+            } else {
+                benchmark_result = Channel.fromPath(optional_file).first()
+            }
+
+            report = runReport(
+                sorted_vcf.vcf_gz.groupTuple(),
+                benchmark_result
+            )
+        } // figure out else statement
+
+        sv_stats_json = report.json
+        report = report.html.concat(
+            final_vcf.map{meta, vcf, tbi -> [vcf, tbi]}
+        )
 
         ch_versions = ch_versions.mix(sniffles2.versions)
-
+        
     emit:
+        report = report
+        sv_stats_json = sv_stats_json
         sniffles2_vcf = sorted_vcf.vcf_gz
         versions = ch_versions // software versions
 }
-
 
 workflow runBenchmark {
     take:
@@ -94,4 +113,22 @@ workflow runBenchmark {
             intersected.intersected_bed)
     emit:
         json = truvari.out.truvari_json
+}
+
+workflow runReport {
+    take:
+        vcf
+        eval_json
+    main:
+        workflow_versions = getVersions()
+        workflow_params = getParams()
+        report(
+            vcf,
+            eval_json,
+            workflow_versions,
+            workflow_params
+        )
+    emit:
+        html = report.out.html
+        json = report.out.json
 }

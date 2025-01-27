@@ -18,8 +18,32 @@ import numpy as np
 import pandas as pd
 
 
-from .common import CHROMOSOMES  # noqa: ABS101
-from .util import get_named_logger, wf_parser  # noqa: ABS101
+CHROMOSOMES = {str(i): i for i in range(1, 23)}
+CHROMOSOMES.update({f"chr{i}": int(i) for i in CHROMOSOMES})
+CHROMOSOMES.update({'X': 23, 'Y': 24, 'chrX': 23, 'chrY': 24})
+
+# from util import get_named_logger, wf_parser  # noqa: ABS101
+
+import argparse
+import logging
+
+_log_name = None
+
+def get_named_logger(name):
+    """Create a logger with a name.
+
+    :param name: name of logger.
+    """
+    name = name.ljust(10)[:10]  # so logging is aligned
+    logger = logging.getLogger('{}.{}'.format(_log_name, name))
+    return logger
+
+def wf_parser(name):
+    """Make an argument parser for a workflow command."""
+    return argparse.ArgumentParser(
+        name,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        add_help=False)
 
 vcf_cols = [
     'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER',
@@ -436,3 +460,8 @@ def argparser():
     )
 
     return parser
+
+if __name__ == "__main__":
+    parser = argparser()
+    args = parser.parse_args()
+    main(args)

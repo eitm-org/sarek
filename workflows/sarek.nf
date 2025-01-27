@@ -462,7 +462,6 @@ workflow SAREK {
     bam_channel = Channel.empty()
     bam_channel = !(params.input.contains("results/csv/mapped.csv")) ? BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai : ch_cram_bam
 
-    bam_channel.view()
 
     if (params.tools?.split(',')?.contains('modkit')) {
         MODKIT(bam_channel, fasta)
@@ -1046,7 +1045,7 @@ workflow SAREK {
                 intervals_for_preprocessing)
 
         // inputs: bam_channel, reference, target, mosdepth_stats, optional_file
-        // emits: report (annotation), sv_stats_json, sniffles_vcf, for_phasing vcf
+        // emits: report (annotation), sv_stats_json, sniffles_vcf
         BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 (
             bam_channel, // bam inputs (meta, bam, bai)
             reference.ref, // reference fasta file
@@ -1055,13 +1054,16 @@ workflow SAREK {
             OPTIONAL
         )
 
+        artifacts = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.report.flatten()
+        json_sv = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sv_stats_json
+
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.versions)
 
         vcf_to_annotate = Channel.empty()
         vcf_to_annotate = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sniffles2_vcf
+        vcf_to_annotate = Channel.empty()
     }
 
-    ch_cram_variant_calling.view()
     if (params.tools?.split(',')?.contains('clairs')) {
         if (params.step == 'annotate') ch_cram_variant_calling = Channel.empty()
 
@@ -1205,7 +1207,7 @@ workflow SAREK {
         )
 
         // Gather vcf files for annotation and QC
-        vcf_to_annotate = Channel.empty()
+        // vcf_to_annotate = Channel.empty()
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.deepvariant_vcf)
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.freebayes_vcf)
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.haplotypecaller_vcf)

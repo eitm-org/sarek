@@ -20,10 +20,10 @@ process SNIFFLES2 {
         def tr_arg = ""
         if (tr_bed.name != 'OPTIONAL_FILE'){
             tr_arg = "--tandem-repeats ${tr_bed}"
+        } else {
+            genome_build = 'hg38' // TODO: make this into params
+            tr_arg = "--tandem-repeats \${WFSV_TRBED_PATH}/${genome_build}.trf.bed"
         }
-
-        genome_build = 'hg38' // TODO: make this into params
-        tr_arg = "--tandem-repeats \${WFSV_TRBED_PATH}/${genome_build}.trf.bed"
 
         // TODO: make these into params
         params.sniffles_args = false
@@ -116,5 +116,65 @@ process sortVCF {
     """
     bcftools sort -m 2G -T ./ -O z $vcf > ${meta.id}.wf_sv.vcf.gz
     tabix -p vcf ${meta.id}.wf_sv.vcf.gz
+    """
+}
+
+process getVersions {
+    label 'process_low'
+    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
+    output:
+        path "versions.txt"
+    script:
+    """
+    trap '' PIPE # suppress SIGPIPE without interfering with pipefail
+    python -c "import pysam; print(f'pysam,{pysam.__version__}')" >> versions.txt
+    truvari version | sed 's/ /,/' >> versions.txt
+    sniffles --version | head -n 1 | sed 's/ Version //' >> versions.txt
+    bcftools --version | head -n 1 | sed 's/ /,/' >> versions.txt
+    samtools --version | head -n 1 | sed 's/ /,/' >> versions.txt
+    echo `seqtk 2>&1 | head -n 3 | tail -n 1 | cut -d ':' -f 2 | sed 's/ /seqtk,/'` >> versions.txt
+    """
+}
+
+process getParams {
+    label 'process_low'
+    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
+    output:
+        path "params.json"
+    script:
+        def paramsJSON = new JsonBuilder(params).toPrettyString()
+    """
+    # Output nextflow params object to JSON
+    echo '$paramsJSON' > params.json
+    """
+}
+
+process report {
+    label 'process_low'
+    container "ontresearch/wf-common:shaabceef445fb63214073cbf5836fdd33c04be4ac7"
+    input:
+        tuple val(xam_meta), path(vcf)
+        file eval_json
+        file versions
+        path "params.json"
+    output:
+        path "${xam_meta.id}.report.html", emit: html, optional: true
+        path "${xam_meta.id}.svs.json", emit: json
+    script:
+        def report_name = "${xam_meta.id}.report.html"
+        def evalResults = eval_json.name != 'OPTIONAL_FILE' ? "--eval_results ${eval_json}" : ""
+
+    """
+    report_sv.py \
+        $report_name \
+        --vcf $vcf \
+        --params params.json \
+        --params-hidden 'help,schema_ignore_params,${params.schema_ignore_params}' \
+        --versions $versions \
+        --revision ${workflow.revision} \
+        --commit ${workflow.commitId} \
+        --output_json "${xam_meta.id}.svs.json" \
+        --workflow_version ${workflow.manifest.version} \
+        $evalResults
     """
 }
