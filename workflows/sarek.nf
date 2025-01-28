@@ -1060,8 +1060,7 @@ workflow SAREK {
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.versions)
 
         vcf_to_annotate = Channel.empty()
-        vcf_to_annotate = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sniffles2_vcf
-        vcf_to_annotate = Channel.empty()
+        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sniffles2_vcf)
     }
 
     if (params.tools?.split(',')?.contains('clairs')) {
@@ -1208,42 +1207,30 @@ workflow SAREK {
 
         // Gather vcf files for annotation and QC
         // vcf_to_annotate = Channel.empty()
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.deepvariant_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.freebayes_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.haplotypecaller_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.manta_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.tiddit_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.strelka_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.freebayes_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.mutect2_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.manta_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.strelka_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.tiddit_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.freebayes_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.mutect2_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.deepvariant_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.freebayes_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.haplotypecaller_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.manta_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.tiddit_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.strelka_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.freebayes_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.mutect2_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.manta_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.strelka_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.tiddit_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.freebayes_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.mutect2_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.manta_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.strelka_vcf)
+        // vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.tiddit_vcf)
+
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.clairs_vcf)
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.clairs_vcf_normal_germline)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.manta_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.strelka_vcf)
-        vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.tiddit_vcf)
 
         // Gather used softwares versions
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_GERMLINE_ALL.out.versions)
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_SOMATIC_ALL.out.versions)
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_TUMOR_ONLY_ALL.out.versions)
-
-        //QC
-        VCF_QC_BCFTOOLS_VCFTOOLS(vcf_to_annotate, intervals_bed_combined)
-
-        ch_versions = ch_versions.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.versions)
-        ch_reports  = ch_reports.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.bcftools_stats.collect{meta, stats -> stats})
-        ch_reports  = ch_reports.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.vcftools_tstv_counts.collect{ meta, counts -> counts})
-        ch_reports  = ch_reports.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.vcftools_tstv_qual.collect{ meta, qual -> qual })
-        ch_reports  = ch_reports.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.vcftools_filter_summary.collect{meta, summary -> summary})
-        ch_reports  = ch_reports.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.vcftools_ldepth.collect{meta, ldepth -> ldepth})
-
-        CHANNEL_VARIANT_CALLING_CREATE_CSV(vcf_to_annotate)
-
 
         // ANNOTATE
         if (params.step == 'annotate') vcf_to_annotate = ch_input_sample
@@ -1270,6 +1257,17 @@ workflow SAREK {
         }
     }
 
+    // QC
+    VCF_QC_BCFTOOLS_VCFTOOLS(vcf_to_annotate, intervals_bed_combined)
+
+    ch_versions = ch_versions.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.versions)
+    ch_reports  = ch_reports.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.bcftools_stats.collect{meta, stats -> stats})
+    ch_reports  = ch_reports.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.vcftools_tstv_counts.collect{ meta, counts -> counts})
+    ch_reports  = ch_reports.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.vcftools_tstv_qual.collect{ meta, qual -> qual })
+    ch_reports  = ch_reports.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.vcftools_filter_summary.collect{meta, summary -> summary})
+    ch_reports  = ch_reports.mix(VCF_QC_BCFTOOLS_VCFTOOLS.out.vcftools_ldepth.collect{meta, ldepth -> ldepth})
+
+    CHANNEL_VARIANT_CALLING_CREATE_CSV(vcf_to_annotate)
 
     ch_version_yaml = Channel.empty()
     if (!(params.skip_tools && params.skip_tools.split(',').contains('versions'))) {

@@ -26,16 +26,17 @@ process BCFTOOLS_STATS {
     def regions_file = regions ? "--regions-file ${regions}" : ""
     def targets_file = targets ? "--targets-file ${targets}" : ""
     def samples_file =  samples ? "--samples-file ${samples}" : ""
+    def is_clairs = meta.variantcaller == "clairs" ? "bcftools +fill-tags $vcf -Ob -o ${vcf.baseName}_tagged.vcf.gz -- -t all,\"INFO/DP:1=int(sum(FORMAT/DP))\"\ncat ${vcf.baseName}_tagged.vcf.gz" : ""
+    def vcf_filename = meta.variantcaller == "clairs" ? "${vcf.baseName}_tagged.vcf.gz" : "${vcf.baseName}.gz"
     """
-    bcftools +fill-tags $vcf -Ob -o ${vcf.baseName}_tagged.vcf.gz -- -t all,"INFO/DP:1=int(sum(FORMAT/DP))"
-    cat ${vcf.baseName}_tagged.vcf.gz 
+    ${is_clairs}
     bcftools stats \\
         --verbose -s - \\
         $args \\
         $regions_file \\
         $targets_file \\
         $samples_file \\
-        ${vcf.baseName}_tagged.vcf.gz > ${prefix}.bcftools_stats.txt
+        ${vcf_filename} > ${prefix}.bcftools_stats.txt
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

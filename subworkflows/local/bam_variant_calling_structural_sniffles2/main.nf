@@ -54,12 +54,24 @@ workflow BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 {
             final_vcf.map{meta, vcf, tbi -> [vcf, tbi]}
         )
 
+        sniffles2_vcf = Channel.empty().mix(sorted_vcf.vcf_gz).map{ meta, vcf ->
+                [[
+                    id:             meta.sample,
+                    num_intervals:  meta.num_intervals,
+                    patient:        meta.patient,
+                    sample:         meta.sample,
+                    sex:            meta.sex,
+                    status:         meta.status,
+                    variantcaller:  "sniffles2"
+                ],vcf]
+            }
+
         ch_versions = ch_versions.mix(sniffles2.versions)
         
     emit:
         report = report
         sv_stats_json = sv_stats_json
-        sniffles2_vcf = sorted_vcf.vcf_gz
+        sniffles2_vcf = sniffles2_vcf
         versions = ch_versions // software versions
 }
 

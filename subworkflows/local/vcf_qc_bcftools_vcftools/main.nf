@@ -12,14 +12,13 @@ workflow VCF_QC_BCFTOOLS_VCFTOOLS {
     main:
 
     ch_versions = Channel.empty()
-    
     BCFTOOLS_STATS(vcf.map{meta, vcf -> [meta, vcf, []]}, [], [], [])
     VCFTOOLS_TSTV_COUNT(vcf, target_bed, [])
     VCFTOOLS_TSTV_QUAL(vcf, target_bed, [])
     VCFTOOLS_SUMMARY(vcf, target_bed, [])
     VCFTOOLS_LDEPTH(vcf, target_bed, [])
 
-    ch_versions = ch_versions.mix(BCFTOOLS_STATS.out.versions)
+    // ch_versions = ch_versions.mix(BCFTOOLS_STATS.out.versions)
     ch_versions = ch_versions.mix(VCFTOOLS_TSTV_COUNT.out.versions)
 
     emit:
