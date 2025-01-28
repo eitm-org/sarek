@@ -1030,6 +1030,8 @@ workflow SAREK {
         ch_cram_variant_calling = Channel.empty().mix(BAM_TO_CRAM_MAPPING.out.cram.join(BAM_TO_CRAM_MAPPING.out.crai, failOnDuplicate: true, failOnMismatch: true))
     }
 
+    vcf_to_annotate = Channel.empty()
+
     if (params.tools?.split(',')?.contains('sniffles2')) {
   
         reference = PREPARE_REFERENCE_SNIFFLES2([
@@ -1059,7 +1061,6 @@ workflow SAREK {
 
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.versions)
 
-        vcf_to_annotate = Channel.empty()
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sniffles2_vcf)
     }
 

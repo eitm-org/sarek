@@ -32,22 +32,19 @@ workflow BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 {
         filterCalls(sniffles2.vcf, mosdepth_stats, target)
         sorted_vcf = sortVCF(filterCalls.out.vcf)
 
-        annotation = false
-        if (!annotation) {
-            final_vcf = sorted_vcf.vcf_gz.join(sorted_vcf.vcf_tbi)
+        final_vcf = sorted_vcf.vcf_gz.join(sorted_vcf.vcf_tbi)
 
-            hg002_seq = false
-            if (hg002_seq) {
-                benchmark_result = runBenchmark(sorted_vcf.vcf_gz, reference, target)
-            } else {
-                benchmark_result = Channel.fromPath(optional_file).first()
-            }
+        hg002_seq = true
+        if (hg002_seq) {
+            benchmark_result = runBenchmark(sorted_vcf.vcf_gz, reference, target).first()
+        } else {
+            benchmark_result = Channel.fromPath(optional_file).first()
+        }
 
-            report = runReport(
-                sorted_vcf.vcf_gz.groupTuple(),
-                benchmark_result
-            )
-        } // figure out else statement
+        report = runReport(
+            sorted_vcf.vcf_gz.groupTuple(),
+            benchmark_result
+        )
 
         sv_stats_json = report.json
         report = report.html.concat(

@@ -34,9 +34,10 @@ process intersectBedWithTruthset {
     def tru_bed_arg = user_truthset_bed.name.startsWith("OPTIONAL_FILE") ? "\${WFSV_EVAL_DATA_PATH}/benchmark.bed" : user_truthset_bed
 
     """
-    cp ${tru_bed_arg} benchmark.txt  
+    awk '{if(\$0 !~ /^#/) print "chr"\$0; else print \$0}' ${tru_bed_arg} > benchmark.bed
+    cp benchmark.bed benchmark.txt  
     bedtools intersect \
-        -a ${tru_bed_arg} \
+        -a benchmark.bed \
         -b $target_bed \
         > target_truthset.bed
     if [ ! -s target_truthset.bed ]
@@ -73,8 +74,8 @@ process truvari {
         -b ${tru_vcf_arg} \
         -c $calls_vcf \
         -f ${ref} \
-        -o ${xam_meta.alias} \
+        -o ${xam_meta.id} \
         --includebed $include_bed
-    mv ${xam_meta.alias}/summary.txt ${xam_meta.alias}.truvari.json
+    mv ${xam_meta.id}/summary.txt ${xam_meta.id}.truvari.json
     """
 }
