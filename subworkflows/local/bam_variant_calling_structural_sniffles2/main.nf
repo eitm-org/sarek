@@ -28,7 +28,7 @@ workflow BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 {
 
         ch_versions = Channel.empty()
 
-        sniffles2 = SNIFFLES2(bam_channel.map{ meta, xam, xai -> [meta, xam, xai] }, optional_file, reference)
+        sniffles2 = SNIFFLES2(bam_channel.map{ meta, xam, xai -> [meta, xam, xai] }, target, reference)
         filterCalls(sniffles2.vcf, mosdepth_stats, target)
         sorted_vcf = sortVCF(filterCalls.out.vcf)
 

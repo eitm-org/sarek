@@ -18,10 +18,10 @@ process SNIFFLES2 {
         // if tr_arg is not provided and genome_build is set
         // automatically pick the relevant TR BED from the SV image
         def tr_arg = ""
+        genome_build = 'hg38'
         if (tr_bed.name != 'OPTIONAL_FILE'){
             tr_arg = "--tandem-repeats ${tr_bed}"
         } else {
-            genome_build = 'hg38' // TODO: make this into params
             tr_arg = "--tandem-repeats \${WFSV_TRBED_PATH}/${genome_build}.trf.bed"
         }
 
