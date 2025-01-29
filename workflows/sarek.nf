@@ -462,13 +462,12 @@ workflow SAREK {
     bam_channel = Channel.empty()
     bam_channel = !(params.input.contains("results/csv/mapped.csv")) ? BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai : ch_cram_bam
 
-
     if (params.tools?.split(',')?.contains('modkit')) {
         MODKIT(bam_channel, fasta)
         ch_versions = ch_versions.mix(MODKIT.out.versions)
     }
 
-    BAM_TO_CRAM_MAPPING(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai, fasta, fasta_fai)
+    BAM_TO_CRAM_MAPPING(bam_channel, fasta, fasta_fai)
     params.save_output_as_bam ? CHANNEL_ALIGN_CREATE_CSV(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai) : CHANNEL_ALIGN_CREATE_CSV(BAM_TO_CRAM_MAPPING.out.cram.join(BAM_TO_CRAM_MAPPING.out.crai, failOnDuplicate: true, failOnMismatch: true))
     //BAM files first must be converted to CRAM files since from this step on we base everything on CRAM format
     
@@ -1060,7 +1059,7 @@ workflow SAREK {
         json_sv = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sv_stats_json
 
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.versions)
-
+        
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sniffles2_vcf)
     }
 

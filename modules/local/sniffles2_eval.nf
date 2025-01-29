@@ -25,7 +25,7 @@ process intersectBedWithTruthset {
     container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
     
     input:
-        tuple path(target_bed), val(target_num)
+        path target_bed
         path user_truthset_bed
     output:
         path "target_truthset.bed", emit: intersected_bed
@@ -54,7 +54,6 @@ process truvari {
     //tag "$meta.id"
     label 'process_low'
     container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
-
     
     input:
         path(ref) //, path(ref_idx), path(ref_cache), env(REF_PATH)

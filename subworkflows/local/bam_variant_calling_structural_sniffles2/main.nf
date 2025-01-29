@@ -99,13 +99,14 @@ workflow runBenchmark {
         
         intersected = intersectBedWithTruthset(target, truthset_bed)
 
+        params.sv_benchmark_vcf = false
         // load user-provided benchmark data
         if (params.sv_benchmark_vcf) {
             // truvari assumes index is [vcf].tbi
             truthset_vcf = Channel.fromPath(params.sv_benchmark_vcf, checkIfExists: true)
             truthset_tbi = Channel.fromPath(params.sv_benchmark_vcf + '.tbi', checkIfExists: true)
         }
-        else {
+        else {    
             // we'll create some non-existent optional files to stage
             // again this will trigger the process to use the bundled benchmark data
             // we use channels here so we can concat them later
