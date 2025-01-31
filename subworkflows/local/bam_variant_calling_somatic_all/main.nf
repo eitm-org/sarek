@@ -13,9 +13,10 @@ include { BAM_VARIANT_CALLING_SOMATIC_MUTECT2           } from '../bam_variant_c
 include { BAM_VARIANT_CALLING_SOMATIC_STRELKA           } from '../bam_variant_calling_somatic_strelka/main'
 include { BAM_VARIANT_CALLING_SOMATIC_TIDDIT            } from '../bam_variant_calling_somatic_tiddit/main'
 
-include { BAM_VARIANT_CALLING_SOMATIC_CLAIRS           } from '../bam_variant_calling_somatic_clairs/main'
+include { BAM_VARIANT_CALLING_SOMATIC_CLAIRS            } from '../bam_variant_calling_somatic_clairs/main'
 
 include { MSISENSORPRO_MSI_SOMATIC                      } from '../../../modules/nf-core/msisensorpro/msi_somatic/main'
+include { BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2      } from '../bam_variant_calling_structural_sniffles2/main'
 
 workflow BAM_VARIANT_CALLING_SOMATIC_ALL {
     take:
@@ -43,7 +44,7 @@ workflow BAM_VARIANT_CALLING_SOMATIC_ALL {
         gc_file                       // channel: [optional]  ascat gc content file
         rt_file                       // channel: [optional]  ascat rt file
         vcf_header                    // channel: [optional] /path/to/vcf_header
-        normal_vcf                // channel: /path/to/normal_germline_vcf
+        normal_vcf                    // channel: /path/to/normal_germline_vcf
 
     main:
 
