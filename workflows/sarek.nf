@@ -48,7 +48,8 @@ def checkPathParamList = [
     params.spliceai_snv_tbi,
     params.vep_cache,
     params.vcf_header,
-    params.normal_vcf
+    params.normal_vcf,
+    params.sv_benchmark_bed
 ]
 
 /*
@@ -148,7 +149,6 @@ if (params.tools && (params.tools.split(',').contains('ascat') || params.tools.s
     IMPORT LOCAL MODULES/SUBWORKFLOWS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
 // Initialize file channels based on params, defined in the params.genomes[params.genome] scope
 ascat_alleles      = params.ascat_alleles      ? Channel.fromPath(params.ascat_alleles).collect()            : Channel.empty()
 ascat_loci         = params.ascat_loci         ? Channel.fromPath(params.ascat_loci).collect()               : Channel.empty()
@@ -167,7 +167,7 @@ mappability        = params.mappability        ? Channel.fromPath(params.mappabi
 pon                = params.pon                ? Channel.fromPath(params.pon).collect()                      : Channel.value([]) //PON is optional for Mutect2 (but highly recommended)
 vcf_header         = params.vcf_header         ? Channel.fromPath(params.vcf_header).collect()               : Channel.empty() // ClairS VCF merging requires re-headering the interval VCFs
 normal_vcf         = params.normal_vcf         ? Channel.fromPath(params.normal_vcf).collect()               : Channel.value([]) // EXPERIMENTAL: Passing normal germline vcf into ClairS to skip normal germline variant calling
-
+sv_benchmark_bed   = params.sv_benchmark_bed 
 
 
 // Initialize value channels based on params, defined in the params.genomes[params.genome] scope
@@ -1052,7 +1052,8 @@ workflow SAREK {
             reference.ref, // reference fasta file
             params.intervals, // bed file
             MOSDEPTH.summary_txt,
-            OPTIONAL
+            OPTIONAL,
+            sv_benchmark_bed
         )
 
         artifacts = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.report.flatten()
