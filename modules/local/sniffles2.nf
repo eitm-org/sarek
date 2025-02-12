@@ -88,7 +88,7 @@ process filterCalls {
     String ctgs = chromosome_codes.join(',')
     def ctgs_filter = "--contigs ${ctgs}"
     """
-    # bedtools intersect -a $target_bed -b $filter_bed -v > filtered_target.bed
+    bedtools subtract -a $target_bed -b $filter_bed > filtered_target.bed
 
     # Filter contigs requre the input VCF to be compressed and indexed
     bcftools view -O z $vcf > input.vcf.gz && tabix -p vcf input.vcf.gz
@@ -96,7 +96,7 @@ process filterCalls {
     # Create filtering script
     get_filter_calls_command.py \
         --bcftools_threads $task.cpus \
-        --target_bedfile $target_bed \ # filtered_target.bed
+        --target_bedfile filtered_target.bed \
         --vcf input.vcf.gz \
         --depth_summary $mosdepth_summary \
         --min_read_support "auto" \
