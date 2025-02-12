@@ -21,23 +21,25 @@ workflow BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 {
         bam_channel                                 // channel: [mandatory] [meta, bam, bai]
         reference                                   // channel: [mandatory] [fa]
         target                                      // channel: [mandatory] [bed]
+        filter                                      // channel: [mandatory] [bed]
         mosdepth_stats
         optional_file
         sv_benchmark_bed
+        sv_benchmark_vcf
 
     main:
 
         ch_versions = Channel.empty()
 
         sniffles2 = SNIFFLES2(bam_channel.map{ meta, xam, xai -> [meta, xam, xai] }, target, reference)
-        filterCalls(sniffles2.vcf, mosdepth_stats, target)
+        filterCalls(sniffles2.vcf, mosdepth_stats, target, filter)
         sorted_vcf = sortVCF(filterCalls.out.vcf)
 
         final_vcf = sorted_vcf.vcf_gz.join(sorted_vcf.vcf_tbi)
 
         hg002_seq = true
         if (hg002_seq) {
-            benchmark_result = runBenchmark(sorted_vcf.vcf_gz, reference, target, sv_benchmark_bed).first()
+            benchmark_result = runBenchmark(sorted_vcf.vcf_gz, reference, target, sv_benchmark_bed, sv_benchmark_vcf).first()
         } else {
             benchmark_result = Channel.fromPath(optional_file).first()
         }
@@ -79,6 +81,7 @@ workflow runBenchmark {
         reference
         target
         sv_benchmark_bed
+        sv_benchmark_vcf
     main:
         // for benchmarking we bundle a dataset in the SV container in $WFSV_EVAL_DATA_PATH
         // rather than coupling that dataset to the workflow by referring to it here
@@ -100,9 +103,8 @@ workflow runBenchmark {
         
         intersected = intersectBedWithTruthset(target, truthset_bed)
 
-        params.sv_benchmark_vcf = false
         // load user-provided benchmark data
-        if (params.sv_benchmark_vcf) {
+        if (sv_benchmark_vcf) {
             // truvari assumes index is [vcf].tbi
             truthset_vcf = Channel.fromPath(params.sv_benchmark_vcf, checkIfExists: true)
             truthset_tbi = Channel.fromPath(params.sv_benchmark_vcf + '.tbi', checkIfExists: true)

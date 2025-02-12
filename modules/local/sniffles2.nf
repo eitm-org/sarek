@@ -3,7 +3,11 @@ import groovy.json.JsonBuilder
 process SNIFFLES2 {
     tag "$meta.id"
     label 'process_low'
-    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
+    
+    conda (params.enable_conda ? "bioconda::sniffles" : null)
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://depot.galaxyproject.org/singularity/sniffles:2.5.3--pyhdfd78af_0':
+        'quay.io/biocontainers/sniffles:2.5.3--pyhdfd78af_0' }"
 
     input:
         tuple val(meta), path(xam), path(xam_idx)
@@ -45,10 +49,10 @@ process SNIFFLES2 {
         --cluster-merge-pos $cluster_merge_pos \
         --input $xam \
         --reference $ref \
-        --input-exclude-flags 2308 \
         --snf ${xam}.wf_sv.snf \
         $tr_arg \
-        $sniffles_args \
+        --mosaic \
+        --mosaic-include-germline \
         $phase \
         --vcf ${xam}.sniffles.vcf
     sed '/.:0:0:0:NULL/d' ${xam}.sniffles.vcf > tmp.vcf
@@ -69,6 +73,7 @@ process filterCalls {
         tuple val(meta), path(vcf)
         tuple val(meta), path(mosdepth_summary)
         path target_bed
+        path filter_bed
     output:
         tuple val(meta), path("*.filtered.vcf"), emit: vcf
     script:
@@ -83,13 +88,15 @@ process filterCalls {
     String ctgs = chromosome_codes.join(',')
     def ctgs_filter = "--contigs ${ctgs}"
     """
+    # bedtools intersect -a $target_bed -b $filter_bed -v > filtered_target.bed
+
     # Filter contigs requre the input VCF to be compressed and indexed
     bcftools view -O z $vcf > input.vcf.gz && tabix -p vcf input.vcf.gz
 
     # Create filtering script
     get_filter_calls_command.py \
         --bcftools_threads $task.cpus \
-        --target_bedfile $target_bed \
+        --target_bedfile $target_bed \ # filtered_target.bed
         --vcf input.vcf.gz \
         --depth_summary $mosdepth_summary \
         --min_read_support "auto" \

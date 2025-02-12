@@ -49,7 +49,9 @@ def checkPathParamList = [
     params.vep_cache,
     params.vcf_header,
     params.normal_vcf,
-    params.sv_benchmark_bed
+    params.sv_benchmark_bed,
+    params.sv_benchmark_vcf,
+    params.filter_bed
 ]
 
 /*
@@ -168,7 +170,7 @@ pon                = params.pon                ? Channel.fromPath(params.pon).co
 vcf_header         = params.vcf_header         ? Channel.fromPath(params.vcf_header).collect()               : Channel.empty() // ClairS VCF merging requires re-headering the interval VCFs
 normal_vcf         = params.normal_vcf         ? Channel.fromPath(params.normal_vcf).collect()               : Channel.value([]) // EXPERIMENTAL: Passing normal germline vcf into ClairS to skip normal germline variant calling
 sv_benchmark_bed   = params.sv_benchmark_bed 
-
+sv_benchmark_vcf   = params.sv_benchmark_vcf
 
 // Initialize value channels based on params, defined in the params.genomes[params.genome] scope
 ascat_genome       = params.ascat_genome       ?: Channel.empty()
@@ -1051,9 +1053,11 @@ workflow SAREK {
             bam_channel, // bam inputs (meta, bam, bai)
             reference.ref, // reference fasta file
             params.intervals, // bed file
+            params.filter_bed,
             MOSDEPTH.summary_txt,
             OPTIONAL,
-            sv_benchmark_bed
+            sv_benchmark_bed,
+            sv_benchmark_vcf
         )
 
         artifacts = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.report.flatten()
@@ -1390,7 +1394,7 @@ def extract_csv(csv_file) {
         // Several sample can belong to the same patient
         // Sample should be unique for the patient
         if (row.patient) meta.patient = row.patient.toString()
-        if (row.sample)  meta.sample  = row.sample.toString().replaceAll('_[1-9]$','')
+        if (row.sample)  meta.sample  = row.sample.toString().replaceAll('_[1-9]$','') // TODO ask xingyao
         if (row.flowcell)  meta.flowcell  = row.flowcell.toString()
 
         // If no sex specified, sex is not considered
