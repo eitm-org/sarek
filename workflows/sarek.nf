@@ -49,9 +49,9 @@ def checkPathParamList = [
     params.vep_cache,
     params.vcf_header,
     params.normal_vcf,
-    params.sv_benchmark_bed,
-    params.sv_benchmark_vcf,
-    params.filter_bed
+    params.sv_benchmark_bed,    // benchmark BED file used for truvari by Sniffles SV caller
+    params.sv_benchmark_vcf,    // benchmark VCF file used for truvari by Sniffles SV caller
+    params.filter_bed           // BED file to filter out pathogenic regions
 ]
 
 /*
@@ -169,8 +169,8 @@ mappability        = params.mappability        ? Channel.fromPath(params.mappabi
 pon                = params.pon                ? Channel.fromPath(params.pon).collect()                      : Channel.value([]) //PON is optional for Mutect2 (but highly recommended)
 vcf_header         = params.vcf_header         ? Channel.fromPath(params.vcf_header).collect()               : Channel.empty() // ClairS VCF merging requires re-headering the interval VCFs
 normal_vcf         = params.normal_vcf         ? Channel.fromPath(params.normal_vcf).collect()               : Channel.value([]) // EXPERIMENTAL: Passing normal germline vcf into ClairS to skip normal germline variant calling
-sv_benchmark_bed   = params.sv_benchmark_bed 
-sv_benchmark_vcf   = params.sv_benchmark_vcf
+sv_benchmark_bed   = params.sv_benchmark_bed        // Sniffles' auto-bundled BED file is for HG19, so set this variable as HG38 as needed
+sv_benchmark_vcf   = params.sv_benchmark_vcf        // Sniffles' auto-bundled VCF file is for HG19, so set this variable as HG38 as needed
 
 // Initialize value channels based on params, defined in the params.genomes[params.genome] scope
 ascat_genome       = params.ascat_genome       ?: Channel.empty()
@@ -390,13 +390,14 @@ workflow SAREK {
 
     // PREPROCESSING
 
-    // Figure out if input is bam or fastq
+    // Figure out if input is bam, cram, or fastq
     ch_input_sample.branch{
         bam:   it[0].data_type == "bam"
         fastq: it[0].data_type == "fastq"
         cram:  it[0].data_type == "cram"
     }.set{ch_input_sample_type}
 
+    // If data type is BAM (aka unmerged), we need to add read groups. if CRAM (aka merged), we don't
     BAM_ADDREPLACERG(ch_input_sample_type.bam)
     ch_bam_mapped = BAM_ADDREPLACERG.out.bam.map{ meta, bam ->
         // update ID when no multiple lanes or splitted fastqs
@@ -434,6 +435,7 @@ workflow SAREK {
     }
     BAM_MERGE_INDEX_SAMTOOLS(ch_bam_sorted)
 
+    // If input data type is cram, we create channel for CRAM conversion
     cram_channel = ch_input_sample_type.cram.map{ meta, cram, crai ->
         //Make sure correct data types are carried through
                         [[
@@ -446,7 +448,7 @@ workflow SAREK {
                             ],
                         cram, crai] }
 
-    CRAM_TO_BAM(cram_channel, fasta, fasta_fai)
+    CRAM_TO_BAM(cram_channel, fasta, fasta_fai) // Modkit requires input BAMs so let's just convert the CRAMs to BAMs
     ch_versions = ch_versions.mix(CRAM_TO_BAM.out.versions)
 
     ch_cram_bam = CRAM_TO_BAM.out.bam.join(CRAM_TO_BAM.out.bai, failOnDuplicate: true, failOnMismatch: true).map{ meta, bam, bai ->
@@ -462,21 +464,23 @@ workflow SAREK {
                         bam, bai] }
 
     bam_channel = Channel.empty()
+    // if we are using the mapped csv file, that tells us that our inputs were the merged CRAM files 
+    // so we want to set the CRAM->BAM mapped channel as our input bam_channel to our tools,
+    // otherwise just use the normal merged BAM channel
     bam_channel = !(params.input.contains("results/csv/mapped.csv")) ? BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai : ch_cram_bam
 
+    // Methylation with modkit!!
     if (params.tools?.split(',')?.contains('modkit')) {
         MODKIT(bam_channel, fasta)
         ch_versions = ch_versions.mix(MODKIT.out.versions)
     }
 
+    // BAM files must be converted to CRAM files since from this step on we base everything on CRAM format
     BAM_TO_CRAM_MAPPING(bam_channel, fasta, fasta_fai)
     params.save_output_as_bam ? CHANNEL_ALIGN_CREATE_CSV(BAM_MERGE_INDEX_SAMTOOLS.out.bam_bai) : CHANNEL_ALIGN_CREATE_CSV(BAM_TO_CRAM_MAPPING.out.cram.join(BAM_TO_CRAM_MAPPING.out.crai, failOnDuplicate: true, failOnMismatch: true))
-    //BAM files first must be converted to CRAM files since from this step on we base everything on CRAM format
-    
     ch_versions = ch_versions.mix(BAM_TO_CRAM_MAPPING.out.versions)
 
     if (params.step == 'mapping') {
-
         // Figure out if input is bam or fastq
         // ch_input_sample.branch{
         //     bam:   it[0].data_type == "bam"
@@ -1033,38 +1037,42 @@ workflow SAREK {
 
     vcf_to_annotate = Channel.empty()
 
+    // Structural variant calling with Sniffles2!!
     if (params.tools?.split(',')?.contains('sniffles2')) {
   
-        reference = PREPARE_REFERENCE_SNIFFLES2([
-            "input_ref": params.fasta, "output_cache": false, "output_mmi": false
-        ])
+        // preparing reference fasta file for sniffles2
+        reference = PREPARE_REFERENCE_SNIFFLES2(["input_ref": params.fasta, "output_cache": false, "output_mmi": false])
 
-        OPTIONAL = file("$projectDir/data/OPTIONAL_FILE")
+        OPTIONAL = file("$projectDir/data/OPTIONAL_FILE") // just a temp file
 
+        // get mosdepth stats, they are used for filtering calls after running Sniffles
         MOSDEPTH = CRAM_QC_RECAL(
                 ch_cram_variant_calling,
                 fasta,
                 fasta_fai,
                 intervals_for_preprocessing)
 
-        // inputs: bam_channel, reference, target, mosdepth_stats, optional_file
+        hg002_seq = true    // true if you have hg002 data to benchmark against
+
+        // this workflow will run: Sniffles2, filterCalls, sortVCF
         // emits: report (annotation), sv_stats_json, sniffles_vcf
         BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 (
-            ch_cram_variant_calling, // bam inputs (meta, bam, bai)
+            ch_cram_variant_calling, // cram inputs (meta, cram, crai)
             reference.ref, // reference fasta file
-            params.intervals, // bed file
-            params.filter_bed,
+            params.intervals, // reference bed file
+            params.filter_bed, // bed file to filter out pathogenic regions
             MOSDEPTH.summary_txt,
-            OPTIONAL,
+            OPTIONAL, // if we don't supply a benchmark bed/vcf, then we use this temp file as a placeholder for benchmarking
             sv_benchmark_bed,
-            sv_benchmark_vcf
+            sv_benchmark_vcf,
+            hg002_seq
         )
 
+        // preparing html/json files for clean viz and output report files
         artifacts = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.report.flatten()
         json_sv = BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sv_stats_json
 
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.versions)
-        
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sniffles2_vcf)
     }
 
