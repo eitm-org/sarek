@@ -1050,7 +1050,7 @@ workflow SAREK {
         // inputs: bam_channel, reference, target, mosdepth_stats, optional_file
         // emits: report (annotation), sv_stats_json, sniffles_vcf
         BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 (
-            bam_channel, // bam inputs (meta, bam, bai)
+            ch_cram_variant_calling, // bam inputs (meta, bam, bai)
             reference.ref, // reference fasta file
             params.intervals, // bed file
             params.filter_bed,

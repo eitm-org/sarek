@@ -28,7 +28,7 @@ process SAMTOOLS_CONVERT {
     samtools view \\
         --threads ${task.cpus} \\
         --reference ${fasta} \\
-        $args \\
+        -F 2308 \\
         $input \\
         -o ${prefix}.${output_extension}
 
