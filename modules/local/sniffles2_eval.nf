@@ -34,10 +34,8 @@ process intersectBedWithTruthset {
     def tru_bed_arg = user_truthset_bed.name.startsWith("OPTIONAL_FILE") ? "\${WFSV_EVAL_DATA_PATH}/benchmark.bed" : user_truthset_bed
 
     """
-    awk '{if(\$0 !~ /^#/) print "chr"\$0; else print \$0}' ${tru_bed_arg} > benchmark.bed
-    cp benchmark.bed benchmark.txt  
     bedtools intersect \
-        -a benchmark.bed \
+        -a ${tru_bed_arg} \
         -b $target_bed \
         > target_truthset.bed
     if [ ! -s target_truthset.bed ]
