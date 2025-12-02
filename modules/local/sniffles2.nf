@@ -1,4 +1,4 @@
-## Turn off mosaic mode (--mosaic, --mosaic-include-germline), restore siffles default clustering (--cluster-merge-pos 100) 
+##Turn off mosaic mode (--mosaic, --mosaic-include-germline), restore siffles default clustering (--cluster-merge-pos 100) 
 
 import groovy.json.JsonBuilder
 
