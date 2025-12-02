@@ -1,3 +1,5 @@
+## Turn off mosaic mode (--mosaic, --mosaic-include-germline), restore siffles default clustering (--cluster-merge-pos 100) 
+
 import groovy.json.JsonBuilder
 
 process SNIFFLES2 {
@@ -46,13 +48,11 @@ process SNIFFLES2 {
         --sample-id ${meta.id} \
         --output-rnames \
         ${min_sv_len} \
-        --cluster-merge-pos $cluster_merge_pos \
+        --cluster-merge-pos 100 \
         --input $xam \
         --reference $ref \
         --snf ${xam}.wf_sv.snf \
         $tr_arg \
-        --mosaic \
-        --mosaic-include-germline \
         $phase \
         --vcf ${xam}.sniffles.vcf
     sed '/.:0:0:0:NULL/d' ${xam}.sniffles.vcf > tmp.vcf
