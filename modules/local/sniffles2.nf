@@ -1,4 +1,4 @@
-// Turn off mosaic mode (--mosaic, --mosaic-include-germline), restore siffles default clustering (--cluster-merge-pos 100) 
+// Turn off mosaic mode (--mosaic, --mosaic-include-germline), restore siffles default clustering (--cluster-merge-pos $params.cluster_merge_pos) 
 
 import groovy.json.JsonBuilder
 
@@ -41,14 +41,14 @@ process SNIFFLES2 {
         def min_sv_len = params.min_sv_length ? "--minsvlen ${params.min_sv_length}" : ""
         // Perform internal phasing only if snp not requested; otherwise, use joint phasing.
         def phase = params.phased ? "--phase" : ""
-        def cluster_merge_pos = params.cluster_merge_pos ? params.cluster_merge_pos : -1
+        
     """
     sniffles \
         --threads $task.cpus \
         --sample-id ${meta.id} \
         --output-rnames \
         ${min_sv_len} \
-        --cluster-merge-pos 100 \
+        --cluster-merge-pos $params.cluster_merge_pos \
         --input $xam \
         --reference $ref \
         --snf ${xam}.wf_sv.snf \
