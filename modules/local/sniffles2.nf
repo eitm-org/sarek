@@ -105,10 +105,10 @@ process filterCalls {
         ${ctgs_filter} > filter.sh
 
     # Run filtering
-    bash filter.sh > ${meta.id}.pre_filtered.vcf
+    bash filter.sh > ${meta.id}.filtered_1.vcf
 
     # Post filters for PASS, PRECISE and AF
-    bcftools view -i "%FILTER='PASS' | %INFO/PRECISE='1'" ${meta.id}.pre_filtered.vcf > ${meta.id}.filtered.vcf
+    bcftools view -i "%FILTER='PASS' && %INFO/PRECISE=1 && %INFO/AF >= 0.25" ${meta.id}.filtered_1.vcf > ${meta.id}.filtered.vcf
     """
 }
 
