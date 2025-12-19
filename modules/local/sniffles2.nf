@@ -1,4 +1,5 @@
-// Turn off mosaic mode (--mosaic, --mosaic-include-germline), restore siffles default clustering (--cluster-merge-pos $params.cluster_merge_pos) 
+// Turn off mosaic mode (--mosaic, --mosaic-include-germline), restore siffles default clustering (--cluster-merge-pos 150)
+// Also add VCF filter PASS, PRECISE, AF>=0.25
 
 import groovy.json.JsonBuilder
 
@@ -48,7 +49,7 @@ process SNIFFLES2 {
         --sample-id ${meta.id} \
         --output-rnames \
         ${min_sv_len} \
-        --cluster-merge-pos $params.cluster_merge_pos \
+        --cluster-merge-pos 150 \
         --input $xam \
         --reference $ref \
         --snf ${xam}.wf_sv.snf \
@@ -104,7 +105,10 @@ process filterCalls {
         ${ctgs_filter} > filter.sh
 
     # Run filtering
-    bash filter.sh > ${meta.id}.filtered.vcf
+    bash filter.sh > ${meta.id}.pre_filtered.vcf
+
+    # Post filters for PASS, PRECISE and AF
+    bcftools view -i "%FILTER='PASS' | %INFO/PRECISE='1'" ${meta.id}.pre_filtered.vcf > ${meta.id}.filtered.vcf
     """
 }
 
