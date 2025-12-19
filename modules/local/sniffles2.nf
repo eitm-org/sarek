@@ -109,7 +109,7 @@ process filterCalls {
 
     # Post filters for PASS, PRECISE and AF
     bcftools view -i "%FILTER='PASS' ${meta.id}.filtered_1.vcf > ${meta.id}.filtered_2.vcf
-    bcftools view -i 'INFO/PRECISE=1 && INFO/AF >= 0.25' ${meta.id}.filtered_1.vcf > ${meta.id}.filtered.vcf
+    bcftools view -i 'INFO/PRECISE=1 && INFO/AF >= 0.25' ${meta.id}.filtered_2.vcf > ${meta.id}.filtered.vcf
     """
 }
 
