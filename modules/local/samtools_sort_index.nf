@@ -20,7 +20,7 @@ process SAMTOOLS_SORT_INDEX {
 
     script:
     """
-    samtools sort -@ $task.cpus -o ${meta.id}.sorted.bam -T $meta.id $bam
+    samtools sort -@ $task.cpus -m 9G -o ${meta.id}.sorted.bam -T $meta.id $bam
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
