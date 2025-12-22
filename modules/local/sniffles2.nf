@@ -1,4 +1,4 @@
-// Turn off mosaic mode (--mosaic, --mosaic-include-germline), restore siffles default clustering (--cluster-merge-pos 150)
+// Restore Sniffles command from Mukta's run with mosaic mode on and --cluster-merge-pos -1
 // Also add VCF filter PASS, PRECISE, AF>=0.25
 
 import groovy.json.JsonBuilder
@@ -42,18 +42,20 @@ process SNIFFLES2 {
         def min_sv_len = params.min_sv_length ? "--minsvlen ${params.min_sv_length}" : ""
         // Perform internal phasing only if snp not requested; otherwise, use joint phasing.
         def phase = params.phased ? "--phase" : ""
-        
+        def cluster_merge_pos = params.cluster_merge_pos ? params.cluster_merge_pos : -1    
     """
     sniffles \
         --threads $task.cpus \
         --sample-id ${meta.id} \
         --output-rnames \
         ${min_sv_len} \
-        --cluster-merge-pos 150 \
+        --cluster-merge-pos $cluster_merge_pos \
         --input $xam \
         --reference $ref \
         --snf ${xam}.wf_sv.snf \
         $tr_arg \
+        --mosaic \
+        --mosaic-include-germline \
         $phase \
         --vcf ${xam}.sniffles.vcf
     sed '/.:0:0:0:NULL/d' ${xam}.sniffles.vcf > tmp.vcf
