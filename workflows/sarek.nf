@@ -1074,7 +1074,9 @@ workflow SAREK {
 
         ch_versions = ch_versions.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.versions)
         vcf_to_annotate = vcf_to_annotate.mix(BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2.out.sniffles2_vcf)
+    return
     }
+
 
     if (params.tools?.split(',')?.contains('clairs')) {
         if (params.step == 'annotate') ch_cram_variant_calling = Channel.empty()

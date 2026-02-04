@@ -9,8 +9,8 @@ process SNIFFLES2 {
     
     conda (params.enable_conda ? "bioconda::sniffles" : null)
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/sniffles:2.5.3--pyhdfd78af_0':
-        'quay.io/biocontainers/sniffles:2.5.3--pyhdfd78af_0' }"
+        'https://depot.galaxyproject.org/singularity/sniffles%3A2.6.3--pyhdfd78af_0':
+        'quay.io/biocontainers/sniffles:2.6.3--pyhdfd78af_0' }"
 
     input:
         tuple val(meta), path(xam), path(xam_idx)
@@ -39,7 +39,7 @@ process SNIFFLES2 {
         params.cluster_merge_pos = false
 
         def sniffles_args = params.sniffles_args ?: ''
-        def min_sv_len = params.min_sv_length ? "--minsvlen ${params.min_sv_length}" : ""
+        // def min_sv_len = params.min_sv_length ? "--minsvlen ${params.min_sv_length}" : ""
         // Perform internal phasing only if snp not requested; otherwise, use joint phasing.
         def phase = params.phased ? "--phase" : ""
         
@@ -48,13 +48,13 @@ process SNIFFLES2 {
         --threads $task.cpus \
         --sample-id ${meta.id} \
         --output-rnames \
-        ${min_sv_len} \
+        --minsvlen 30 \
         --cluster-merge-pos 150 \
         --input $xam \
         --reference $ref \
         --snf ${xam}.wf_sv.snf \
         $tr_arg \
-        $phase \
+        --phase \
         --vcf ${xam}.sniffles.vcf
     sed '/.:0:0:0:NULL/d' ${xam}.sniffles.vcf > tmp.vcf
     mv tmp.vcf ${xam}.sniffles.vcf
@@ -68,7 +68,7 @@ process SNIFFLES2 {
 
 process filterCalls {
     label 'process_low'
-    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
+    container "ontresearch/wf-human-variation-sv:sha8134f9fef5e19605c7fb4c1348961d6771f1af79"
 
     input:
         tuple val(meta), path(vcf)
@@ -97,7 +97,6 @@ process filterCalls {
     # Create filtering script
     get_filter_calls_command.py \
         --bcftools_threads $task.cpus \
-        --target_bedfile filtered_target.bed \
         --vcf input.vcf.gz \
         --depth_summary $mosdepth_summary \
         --min_read_support "auto" \
@@ -105,11 +104,11 @@ process filterCalls {
         ${ctgs_filter} > filter.sh
 
     # Run filtering
-    bash filter.sh > ${meta.id}.filtered_1.vcf
+    bash filter.sh > ${meta.id}.filtered.vcf
 
     # Post filters for PASS, PRECISE and AF
-    bcftools view -i "%FILTER='PASS'" ${meta.id}.filtered_1.vcf > ${meta.id}.filtered_2.vcf
-    bcftools view -i 'INFO/PRECISE=1 && INFO/AF >= 0.25' ${meta.id}.filtered_2.vcf > ${meta.id}.filtered.vcf
+    # bcftools view -i "%FILTER='PASS'" ${meta.id}.filtered_1.vcf > ${meta.id}.filtered_2.vcf
+    # bcftools view -i 'INFO/PRECISE=1 && INFO/AF >= 0.25' ${meta.id}.filtered_2.vcf > ${meta.id}.filtered.vcf
     """
 }
 
@@ -117,7 +116,7 @@ process filterCalls {
 //  we'll rename it with its desired output name here
 process sortVCF {
     label 'process_low'
-    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
+    container "ontresearch/wf-human-variation-sv:sha8134f9fef5e19605c7fb4c1348961d6771f1af79"
 
     input:
         tuple val(meta), path(vcf)
@@ -133,7 +132,7 @@ process sortVCF {
 
 process getVersions {
     label 'process_low'
-    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
+    container "ontresearch/wf-human-variation-sv:sha8134f9fef5e19605c7fb4c1348961d6771f1af79"
     output:
         path "versions.txt"
     script:
@@ -150,7 +149,7 @@ process getVersions {
 
 process getParams {
     label 'process_low'
-    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
+    container "ontresearch/wf-human-variation-sv:sha8134f9fef5e19605c7fb4c1348961d6771f1af79"
     output:
         path "params.json"
     script:

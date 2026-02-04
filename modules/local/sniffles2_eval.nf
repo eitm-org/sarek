@@ -3,7 +3,7 @@
 process filterBenchmarkVcf {
     //tag "$meta.id"
     label 'process_low'
-    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
+    container "ontresearch/wf-human-variation-sv:sha8134f9fef5e19605c7fb4c1348961d6771f1af79"
 
     input:
         tuple val(xam_meta), path(calls_vcf)
@@ -22,7 +22,7 @@ process filterBenchmarkVcf {
 process intersectBedWithTruthset {
     //tag "$meta.id"
     label 'process_low'
-    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
+    container "ontresearch/wf-human-variation-sv:sha8134f9fef5e19605c7fb4c1348961d6771f1af79"
     
     input:
         path target_bed
@@ -51,7 +51,7 @@ process intersectBedWithTruthset {
 process truvari {
     //tag "$meta.id"
     label 'process_low'
-    container "ontresearch/wf-human-variation-sv:shac591518dd32ecc3936666c95ff08f6d7474e9728"
+    container "ontresearch/wf-human-variation-sv:sha8134f9fef5e19605c7fb4c1348961d6771f1af79"
     
     input:
         path(ref) //, path(ref_idx), path(ref_cache), env(REF_PATH)
@@ -64,15 +64,28 @@ process truvari {
     // use the bundled benchmark data if the user_truthset_vcf is the dummy
     def tru_vcf_arg = user_truthset_vcf.name.startsWith("OPTIONAL_FILE") ? "\${WFSV_EVAL_DATA_PATH}/benchmark.vcf.gz" : user_truthset_vcf
     """
-    truvari bench \
+    
+    bcftools norm -f $ref -m -any $calls_vcf -Oz -o ${calls_vcf}.split.vcf
+    bgzip ${calls_vcf}.split.vcf
+    bcftools index -t ${calls_vcf}.split.vcf.gz
+
+    truvari benc \
         --passonly \
-        --pctsim 0 \
         --dup-to-ins \
+        --pick ac \
         -b ${tru_vcf_arg} \
-        -c $calls_vcf \
+        -c ${calls_vcf}.split.vcf.gz \
         -f ${ref} \
         -o ${xam_meta.id} \
         --includebed $include_bed
+/*
+    truvari refine \
+        --recount \
+        --use-region-coords \
+        --use-original-vcfs \
+        --align mafft \
+        ${xam_meta.id}
+*/ 
     mv ${xam_meta.id}/summary.txt ${xam_meta.id}.truvari.json
     """
 }
