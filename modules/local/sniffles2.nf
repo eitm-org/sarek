@@ -1,5 +1,6 @@
-// Turn off mosaic mode (--mosaic, --mosaic-include-germline), restore siffles default clustering (--cluster-merge-pos 150)
-// Also add VCF filter PASS, PRECISE, AF>=0.25
+// Update to Sniffles_2.7.2
+// Turn on mosaic mode (--mosaic, --mosaic-include-germline), restore siffles default clustering (--cluster-merge-pos 150) and sv length (--minsvlen 50)
+// Also remove VCF filter PRECISE, AF>=0.25
 
 import groovy.json.JsonBuilder
 
@@ -48,7 +49,9 @@ process SNIFFLES2 {
         --threads $task.cpus \
         --sample-id ${meta.id} \
         --output-rnames \
-        --minsvlen 30 \
+        --mosaic \
+        --mosaic-include-germline \
+        --minsvlen 50 \
         --cluster-merge-pos 150 \
         --input $xam \
         --reference $ref \
@@ -104,11 +107,11 @@ process filterCalls {
         ${ctgs_filter} > filter.sh
 
     # Run filtering
-    bash filter.sh > ${meta.id}.filtered.vcf
+    bash filter.sh > ${meta.id}.filtered_1.vcf
 
     # Post filters for PASS, PRECISE and AF
-    # bcftools view -i "%FILTER='PASS'" ${meta.id}.filtered_1.vcf > ${meta.id}.filtered_2.vcf
-    # bcftools view -i 'INFO/PRECISE=1 && INFO/AF >= 0.25' ${meta.id}.filtered_2.vcf > ${meta.id}.filtered.vcf
+    bcftools view -i "%FILTER='PASS'" ${meta.id}.filtered_1.vcf > ${meta.id}.filtered.vcf
+    bcftools view -i 'INFO/PRECISE=1 && INFO/AF >= 0.25' ${meta.id}.filtered_2.vcf > ${meta.id}.filtered.vcf
     """
 }
 
