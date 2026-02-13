@@ -40,14 +40,14 @@ workflow BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 {
         // }
 
         // run report.py to get nice, clean stats/counts from VCFs
-        report = runReport(
-            sorted_vcf.vcf_gz.groupTuple(),
-            benchmark_result
-        )
-        sv_stats_json = report.json
-        report = report.html.concat(
-            final_vcf.map{meta, vcf, tbi -> [vcf, tbi]}
-        )
+        // report = runReport(
+        //    sorted_vcf.vcf_gz.groupTuple(),
+        //    benchmark_result
+        //)
+        // sv_stats_json = report.json
+        // report = report.html.concat(
+        //    final_vcf.map{meta, vcf, tbi -> [vcf, tbi]}
+        // )
 
         // remap to add variantcaller info
         sniffles2_vcf = Channel.empty().mix(sorted_vcf.vcf_gz).map{ meta, vcf ->
@@ -65,8 +65,8 @@ workflow BAM_VARIANT_CALLING_STRUCTURAL_SNIFFLES2 {
         ch_versions = ch_versions.mix(sniffles2.versions)
         
     emit:
-        report = report
-        sv_stats_json = sv_stats_json
+        // report = report
+        // sv_stats_json = sv_stats_json
         sniffles2_vcf = sniffles2_vcf
         versions = ch_versions // software versions
 }
