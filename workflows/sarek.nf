@@ -1052,7 +1052,7 @@ workflow SAREK {
                 fasta_fai,
                 intervals_for_preprocessing)
 
-        hg002_seq = true    // true if you have hg002 data to benchmark against
+        hg002_seq = false    // true if you have hg002 data to benchmark against
 
         // this workflow will run: Sniffles2, filterCalls, sortVCF
         // emits: report (annotation), sv_stats_json, sniffles_vcf
