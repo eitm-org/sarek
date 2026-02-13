@@ -10,8 +10,8 @@ process SNIFFLES2 {
     
     conda (params.enable_conda ? "bioconda::sniffles" : null)
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/sniffles%3A2.6.3--pyhdfd78af_0':
-        'quay.io/biocontainers/sniffles:2.6.3--pyhdfd78af_0' }"
+        'https://depot.galaxyproject.org/singularity/sniffles%3A2.7.2--pyhdfd78af_0':
+        'quay.io/biocontainers/sniffles:2.7.2--pyhdfd78af_0' }"
 
     input:
         tuple val(meta), path(xam), path(xam_idx)
